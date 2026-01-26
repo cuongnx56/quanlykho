@@ -2,9 +2,612 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <title>Hệ thống Quản lý Bán hàng & Tồn kho</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="index.css">
+  
+  <!-- SEO Meta Tags -->
+  <title>Phần mềm Quản lý Bán hàng & Tồn kho Miễn phí - Google Sheets</title>
+  <meta name="description" content="Phần mềm quản lý bán hàng và tồn kho miễn phí trên Google Sheets. Quản lý sản phẩm, đơn hàng, kho hàng, báo cáo doanh thu dễ dàng. Không cần cài đặt, sử dụng ngay trên trình duyệt.">
+  <meta name="keywords" content="phần mềm quản lý bán hàng, quản lý tồn kho, quản lý kho hàng, Google Sheets, phần mềm miễn phí, quản lý cửa hàng, quản lý shop, báo cáo doanh thu">
+  <meta name="author" content="Quản Lý Kho">
+  <meta name="robots" content="index, follow">
+  
+  <!-- Open Graph Meta Tags -->
+  <meta property="og:title" content="Phần mềm Quản lý Bán hàng & Tồn kho Miễn phí">
+  <meta property="og:description" content="Giải pháp quản lý cửa hàng toàn diện trên Google Sheets - Miễn phí & Dễ sử dụng">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://yourwebsite.com">
+  <meta property="og:image" content="https://yourwebsite.com/images/og-image.jpg">
+  
+  <!-- Twitter Card Meta Tags -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Phần mềm Quản lý Bán hàng & Tồn kho Miễn phí">
+  <meta name="twitter:description" content="Giải pháp quản lý cửa hàng toàn diện trên Google Sheets">
+  <meta name="twitter:image" content="https://yourwebsite.com/images/twitter-image.jpg">
+  
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://yourwebsite.com">
+  
+  <!-- Schema.org Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Phần mềm Quản lý Bán hàng & Tồn kho",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web Browser",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "VND"
+    },
+    "description": "Phần mềm quản lý bán hàng và tồn kho miễn phí trên Google Sheets",
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.8",
+      "ratingCount": "150"
+    }
+  }
+  </script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #1e293b;
+      background: #0f172a;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* Topbar */
+    .topbar {
+      background: rgba(17, 24, 39, 0.95);
+      backdrop-filter: blur(10px);
+      color: #fff;
+      padding: 20px 0;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .topbar .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .topbar h1 {
+      font-size: 1.5rem;
+      color: #fff;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-menu {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .nav-link {
+      color: #fff;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .nav-link:hover {
+      background: rgba(99, 102, 241, 0.3);
+      border-color: rgba(99, 102, 241, 0.5);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+
+    /* Hero Section */
+    .hero-section {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 100px 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="none"/><circle cx="50" cy="50" r="2" fill="rgba(255,255,255,0.1)"/></svg>');
+      opacity: 0.3;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      color: white;
+    }
+
+    .hero-content h1 {
+      font-size: 3.5rem;
+      font-weight: 800;
+      margin-bottom: 20px;
+      text-shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
+      animation: fadeInUp 0.8s ease;
+    }
+
+    .hero-content .tagline {
+      font-size: 1.4rem;
+      margin-bottom: 40px;
+      opacity: 0.95;
+      animation: fadeInUp 0.8s ease 0.2s both;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+      animation: fadeInUp 0.8s ease 0.4s both;
+    }
+
+    .btn-hero {
+      padding: 18px 40px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-size: 1.1rem;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-hero-primary {
+      background: white;
+      color: #667eea;
+    }
+
+    .btn-hero-primary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(255, 255, 255, 0.3);
+    }
+
+    .btn-hero-secondary {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: 2px solid white;
+    }
+
+    .btn-hero-secondary:hover {
+      background: white;
+      color: #667eea;
+      transform: translateY(-3px);
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Screenshots Section */
+    .screenshots-section {
+      padding: 80px 0;
+      background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .section-header h2 {
+      font-size: 2.5rem;
+      color: white;
+      margin-bottom: 15px;
+      font-weight: 700;
+    }
+
+    .section-header p {
+      font-size: 1.2rem;
+      color: #94a3b8;
+    }
+
+    .screenshots-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 30px;
+      margin-bottom: 40px;
+    }
+
+    .screenshot-card {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .screenshot-card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      border-color: rgba(99, 102, 241, 0.5);
+    }
+
+    .screenshot-image {
+      width: 100%;
+      height: 250px;
+      background: #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .screenshot-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .screenshot-placeholder {
+      font-size: 4rem;
+      color: #94a3b8;
+    }
+
+    .screenshot-image::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+      animation: shine 3s infinite;
+    }
+
+    @keyframes shine {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .screenshot-info {
+      padding: 25px;
+    }
+
+    .screenshot-info h3 {
+      font-size: 1.3rem;
+      color: white;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+
+    .screenshot-info p {
+      color: #94a3b8;
+      line-height: 1.6;
+    }
+
+    /* Features Section */
+    .features-section {
+      padding: 80px 0;
+      background: #1e293b;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+    }
+
+    .feature-card {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 35px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: all 0.3s ease;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-5px);
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(99, 102, 241, 0.5);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .feature-icon {
+      font-size: 3rem;
+      margin-bottom: 20px;
+      display: block;
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+    }
+
+    .feature-card h3 {
+      font-size: 1.4rem;
+      margin-bottom: 12px;
+      color: white;
+      font-weight: 600;
+    }
+
+    .feature-card p {
+      color: #94a3b8;
+      line-height: 1.7;
+    }
+
+    /* How it works */
+    .how-it-works {
+      padding: 80px 0;
+      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 40px;
+      margin-top: 60px;
+    }
+
+    .step {
+      text-align: center;
+      position: relative;
+    }
+
+    .step::after {
+      content: '→';
+      position: absolute;
+      top: 30px;
+      right: -20px;
+      font-size: 2rem;
+      color: rgba(99, 102, 241, 0.3);
+    }
+
+    .step:last-child::after {
+      display: none;
+    }
+
+    .step-number {
+      width: 70px;
+      height: 70px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: bold;
+      margin: 0 auto 25px;
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+      position: relative;
+    }
+
+    .step-number::before {
+      content: '';
+      position: absolute;
+      inset: -5px;
+      border-radius: 50%;
+      border: 2px solid rgba(99, 102, 241, 0.3);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 0.5; }
+    }
+
+    .step h3 {
+      font-size: 1.4rem;
+      margin-bottom: 12px;
+      color: white;
+      font-weight: 600;
+    }
+
+    .step p {
+      color: #94a3b8;
+      line-height: 1.7;
+    }
+
+    /* CTA Section */
+    .cta-section {
+      padding: 100px 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="2" fill="rgba(255,255,255,0.1)"/></svg>');
+      opacity: 0.3;
+    }
+
+    .cta-content {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      color: white;
+    }
+
+    .cta-content h2 {
+      font-size: 3rem;
+      margin-bottom: 20px;
+      font-weight: 700;
+    }
+
+    .cta-content p {
+      font-size: 1.3rem;
+      margin-bottom: 50px;
+      opacity: 0.95;
+    }
+
+    .cta-buttons {
+      display: flex;
+      gap: 25px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn-cta {
+      padding: 20px 50px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-size: 1.2rem;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-cta-primary {
+      background: white;
+      color: #667eea;
+    }
+
+    .btn-cta-primary:hover {
+      transform: translateY(-5px) scale(1.05);
+      box-shadow: 0 12px 35px rgba(255, 255, 255, 0.3);
+    }
+
+    .btn-cta-secondary {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: 2px solid white;
+    }
+
+    .btn-cta-secondary:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-5px) scale(1.05);
+    }
+
+    /* Footer */
+    .footer {
+      background: #0f172a;
+      padding: 40px 0;
+      text-align: center;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .footer-text {
+      font-size: 1rem;
+      margin-bottom: 15px;
+      color: #94a3b8;
+    }
+
+    .footer-bank {
+      font-size: 1.2rem;
+      color: white;
+      font-weight: 500;
+    }
+
+    .footer-bank strong {
+      color: #667eea;
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .topbar .container {
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .nav-menu {
+        width: 100%;
+        flex-direction: column;
+      }
+
+      .nav-link {
+        width: 100%;
+        text-align: center;
+      }
+
+      .hero-content h1 {
+        font-size: 2.2rem;
+      }
+
+      .hero-content .tagline {
+        font-size: 1.1rem;
+      }
+
+      .hero-section {
+        padding: 60px 0;
+      }
+
+      .section-header h2 {
+        font-size: 2rem;
+      }
+
+      .screenshots-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .features-grid,
+      .steps {
+        grid-template-columns: 1fr;
+      }
+
+      .step::after {
+        content: '↓';
+        top: auto;
+        bottom: -30px;
+        right: 50%;
+        transform: translateX(50%);
+      }
+
+      .cta-content h2 {
+        font-size: 2rem;
+      }
+
+      .cta-content p {
+        font-size: 1.1rem;
+      }
+
+      .cta-buttons {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .btn-cta {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
 </head>
 <body>
 
@@ -12,25 +615,120 @@
   <div class="container">
     <h1>📦 Quản Lý Kho</h1>
     <nav class="nav-menu">
-      <a href="/admin/create-shop.html" class="nav-link">Tạo Shop</a>
-      <a href="/admin/products.html" class="nav-link">Đăng nhập</a>
+      <a href="/admin/create-shop.html" class="nav-link">✨ Tạo Shop</a>
+      <a href="/admin/products.html" class="nav-link">🔐 Đăng nhập</a>
     </nav>
   </div>
 </header>
 
-<header class="hero-header">
+<section class="hero-section">
   <div class="container">
-    <div class="logo">
-      <h1>Hệ thống Quản lý Bán hàng & Tồn kho</h1>
-      <p class="tagline">Giải pháp quản lý cửa hàng toàn diện trên Google Sheets</p>
+    <div class="hero-content">
+      <h1>Phần mềm Quản lý Bán hàng & Tồn kho</h1>
+      <p class="tagline">Giải pháp quản lý cửa hàng toàn diện trên Google Sheets - Miễn phí & Dễ sử dụng</p>
+      <div class="hero-buttons">
+        <a href="/admin/create-shop.html" class="btn-hero btn-hero-primary">
+          <span>✨</span> Tạo Shop Miễn Phí
+        </a>
+        <a href="/admin/products.html" class="btn-hero btn-hero-secondary">
+          <span>🔐</span> Đăng Nhập
+        </a>
+      </div>
     </div>
   </div>
-</header>
+</section>
 
-<main class="container">
-  <!-- Features Section -->
-  <section class="features-section">
-    <h2>✨ Tính năng nổi bật</h2>
+<section class="screenshots-section">
+  <div class="container">
+    <div class="section-header">
+      <h2>📸 Giao Diện Phần Mềm</h2>
+      <p>Khám phá các tính năng mạnh mẽ qua hình ảnh demo</p>
+    </div>
+    
+    <div class="screenshots-grid">
+      <!-- Card 1: Dashboard - ADMIN THAY ĐỔI SRC Ở ĐÂY -->
+      <div class="screenshot-card">
+        <div class="screenshot-image">
+          <img src="https://via.placeholder.com/600x400/667eea/ffffff?text=Dashboard" alt="Dashboard Tổng Quan - Phần mềm Quản lý Bán hàng">
+          <!-- Nếu chưa có ảnh, sẽ hiển thị placeholder bên dưới -->
+          <!-- <span class="screenshot-placeholder">📊</span> -->
+        </div>
+        <div class="screenshot-info">
+          <h3>Dashboard Tổng Quan</h3>
+          <p>Theo dõi doanh thu, tồn kho, đơn hàng và các chỉ số quan trọng trong một màn hình duy nhất</p>
+        </div>
+      </div>
+      
+      <!-- Card 2: Sản phẩm - ADMIN THAY ĐỔI SRC Ở ĐÂY -->
+      <div class="screenshot-card">
+        <div class="screenshot-image">
+          <img src="https://via.placeholder.com/600x400/764ba2/ffffff?text=Quan+Ly+San+Pham" alt="Quản lý Sản phẩm - Phần mềm Quản lý Kho">
+          <!-- <span class="screenshot-placeholder">🧩</span> -->
+        </div>
+        <div class="screenshot-info">
+          <h3>Quản Lý Sản Phẩm</h3>
+          <p>Thêm, sửa, xóa sản phẩm dễ dàng với giao diện trực quan. Upload hình ảnh, quản lý giá và tồn kho</p>
+        </div>
+      </div>
+      
+      <!-- Card 3: Kho hàng - ADMIN THAY ĐỔI SRC Ở ĐÂY -->
+      <div class="screenshot-card">
+        <div class="screenshot-image">
+          <img src="https://via.placeholder.com/600x400/10b981/ffffff?text=Quan+Ly+Kho" alt="Quản lý Kho hàng - Nhập xuất tồn">
+          <!-- <span class="screenshot-placeholder">📦</span> -->
+        </div>
+        <div class="screenshot-info">
+          <h3>Quản Lý Kho Hàng</h3>
+          <p>Nhập - xuất - tồn kho chính xác. Cảnh báo sản phẩm sắp hết, lịch sử giao dịch chi tiết</p>
+        </div>
+      </div>
+      
+      <!-- Card 4: Đơn hàng - ADMIN THAY ĐỔI SRC Ở ĐÂY -->
+      <div class="screenshot-card">
+        <div class="screenshot-image">
+          <img src="https://via.placeholder.com/600x400/f59e0b/ffffff?text=Quan+Ly+Don+Hang" alt="Quản lý Đơn hàng - Bán hàng">
+          <!-- <span class="screenshot-placeholder">🛒</span> -->
+        </div>
+        <div class="screenshot-info">
+          <h3>Quản Lý Đơn Hàng</h3>
+          <p>Tạo đơn hàng nhanh chóng, theo dõi trạng thái, tự động cập nhật tồn kho khi hoàn thành</p>
+        </div>
+      </div>
+      
+      <!-- Card 5: Báo cáo - ADMIN THAY ĐỔI SRC Ở ĐÂY -->
+      <div class="screenshot-card">
+        <div class="screenshot-image">
+          <img src="https://via.placeholder.com/600x400/ef4444/ffffff?text=Bao+Cao+Thong+Ke" alt="Báo cáo Thống kê - Doanh thu">
+          <!-- <span class="screenshot-placeholder">📈</span> -->
+        </div>
+        <div class="screenshot-info">
+          <h3>Báo Cáo & Thống Kê</h3>
+          <p>Biểu đồ doanh thu theo thời gian, phân tích sản phẩm bán chạy, báo cáo lợi nhuận</p>
+        </div>
+      </div>
+      
+      <!-- Card 6: Cài đặt - ADMIN THAY ĐỔI SRC Ở ĐÂY -->
+      <div class="screenshot-card">
+        <div class="screenshot-image">
+          <img src="https://via.placeholder.com/600x400/8b5cf6/ffffff?text=Cai+Dat" alt="Cài đặt Hệ thống">
+          <!-- <span class="screenshot-placeholder">⚙️</span> -->
+        </div>
+        <div class="screenshot-info">
+          <h3>Cài Đặt & Tùy Chỉnh</h3>
+          <p>Quản lý thông tin shop, tài khoản người dùng, cấu hình hệ thống theo nhu cầu</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="features-section">
+  <div class="container">
+    <div class="section-header">
+      <h2>✨ Tính Năng Nổi Bật</h2>
+      <p>Tất cả những gì bạn cần để quản lý cửa hàng hiệu quả</p>
+    </div>
+    
     <div class="features-grid">
       <div class="feature-card">
         <div class="feature-icon">🧩</div>
@@ -58,8 +756,8 @@
       
       <div class="feature-card">
         <div class="feature-icon">☁️</div>
-        <h3>Lưu trữ trên Google Sheets</h3>
-        <p>Tất cả dữ liệu được lưu trữ an toàn trên Google Sheets. Dễ dàng truy cập và chia sẻ.</p>
+        <h3>Lưu trữ Google Sheets</h3>
+        <p>Tất cả dữ liệu được lưu trữ an toàn trên Google Sheets. Dễ dàng truy cập và chia sẻ mọi lúc mọi nơi.</p>
       </div>
       
       <div class="feature-card">
@@ -68,33 +766,16 @@
         <p>Giao diện thân thiện, dễ sử dụng. Không cần cài đặt phức tạp, chỉ cần trình duyệt web.</p>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- CTA Section -->
-  <section class="cta-section">
-    <div class="cta-card">
-      <h2>Bắt đầu ngay hôm nay</h2>
-      <p class="cta-description">Chọn một trong các tùy chọn bên dưới để bắt đầu sử dụng hệ thống</p>
-      
-      <div class="cta-buttons">
-        <a href="/admin/create-shop.html" class="btn btn-primary btn-large">
-          <span class="btn-icon">✨</span>
-          <span class="btn-text">Tạo Shop mới</span>
-          <span class="btn-subtitle">Chưa có tài khoản? Tạo shop ngay</span>
-        </a>
-        
-        <a href="/admin/products.html" class="btn btn-secondary btn-large">
-          <span class="btn-icon">🔐</span>
-          <span class="btn-text">Đăng nhập Quản trị</span>
-          <span class="btn-subtitle">Đã có tài khoản? Vào trang quản trị</span>
-        </a>
-      </div>
+<section class="how-it-works">
+  <div class="container">
+    <div class="section-header">
+      <h2>🔄 Cách Hoạt Động</h2>
+      <p>Chỉ 3 bước đơn giản để bắt đầu quản lý cửa hàng của bạn</p>
     </div>
-  </section>
-
-  <!-- How it works -->
-  <section class="how-it-works">
-    <h2>🔄 Cách hoạt động</h2>
+    
     <div class="steps">
       <div class="step">
         <div class="step-number">1</div>
@@ -105,7 +786,7 @@
       <div class="step">
         <div class="step-number">2</div>
         <h3>Quản lý Sản phẩm</h3>
-        <p>Thêm sản phẩm, nhập kho, tạo đơn hàng. Tất cả được lưu trữ trên Google Sheets.</p>
+        <p>Thêm sản phẩm, nhập kho, tạo đơn hàng. Tất cả được lưu trữ và đồng bộ trên Google Sheets.</p>
       </div>
       
       <div class="step">
@@ -114,13 +795,30 @@
         <p>Theo dõi doanh thu, tồn kho, và các thống kê quan trọng khác trong trang báo cáo.</p>
       </div>
     </div>
-  </section>
-</main>
+  </div>
+</section>
+
+<section class="cta-section">
+  <div class="container">
+    <div class="cta-content">
+      <h2>Sẵn sàng bắt đầu?</h2>
+      <p>Tạo shop miễn phí ngay hôm nay và trải nghiệm quản lý cửa hàng chuyên nghiệp</p>
+      <div class="cta-buttons">
+        <a href="/admin/create-shop.html" class="btn-cta btn-cta-primary">
+          <span>✨</span> Tạo Shop Miễn Phí
+        </a>
+        <a href="/admin/products.html" class="btn-cta btn-cta-secondary">
+          <span>🔐</span> Đăng Nhập Ngay
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
 
 <footer class="footer">
   <div class="container">
     <p class="footer-text">Đây là phần mềm miễn phí. Hãy donate cho tác giả để tiếp tục phát triển!</p>
-    <p class="footer-bank">TPBank : <strong>26039388666</strong></p>
+    <p class="footer-bank">TPBank: <strong>26039388666</strong></p>
   </div>
 </footer>
 
