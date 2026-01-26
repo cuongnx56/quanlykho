@@ -1,0 +1,195 @@
+/**
+ * Common utilities for admin pages
+ * Shared functions across all admin pages
+ */
+
+// Constants
+const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbzs7FiPxCy0Offo90kG3MqrfkgjilhI25AsrEh09TzF7A_PPsxs3C_Xq4ifCLKiQdIR/exec";
+
+const sessionDefaults = {
+  apiUrl: DEFAULT_API_URL,
+  apiKey: "",
+  token: "",
+  email: "",
+  role: ""
+};
+
+// Initialize session from AuthSession or defaults
+let session = window.AuthSession ? window.AuthSession.load(sessionDefaults) : { ...sessionDefaults };
+
+/**
+ * Get element by ID
+ */
+function byId(id) {
+  return document.getElementById(id);
+}
+
+/**
+ * Format email to short format: cuo...gmail.com
+ */
+function formatShortEmail(email) {
+  if (!email) return "";
+  const atIndex = email.indexOf("@");
+  if (atIndex === -1) return email;
+  
+  const localPart = email.substring(0, atIndex);
+  const domain = email.substring(atIndex + 1);
+  
+  if (localPart.length <= 3) {
+    return email; // Email quá ngắn, không cần rút gọn
+  }
+  
+  // Lấy 3 ký tự đầu + ... + domain
+  return `${localPart.substring(0, 3)}...${domain}`;
+}
+
+/**
+ * Set session info text
+ */
+function setSessionInfo(text) {
+  const el = byId("session-info");
+  if (el) el.textContent = text;
+}
+
+/**
+ * Update session UI (login/logout state)
+ */
+function updateSessionUI() {
+  const logoutBtn = byId("btn-logout");
+  const loginSection = byId("login-section");
+  
+  if (session.token) {
+    const shortEmail = formatShortEmail(session.email);
+    setSessionInfo(`${shortEmail} (${session.role})`);
+    if (logoutBtn) logoutBtn.classList.remove("hidden");
+    if (loginSection) loginSection.classList.add("hidden");
+  } else {
+    setSessionInfo("Chưa đăng nhập");
+    if (logoutBtn) logoutBtn.classList.add("hidden");
+    if (loginSection) loginSection.classList.remove("hidden");
+  }
+}
+
+/**
+ * Sync inputs from session
+ */
+function syncInputsFromSession() {
+  const apiUrlInput = document.getElementById("api_url");
+  if (apiUrlInput) apiUrlInput.value = session.apiUrl || DEFAULT_API_URL;
+  
+  const apiKeyInput = byId("api_key");
+  if (apiKeyInput) apiKeyInput.value = session.apiKey || "";
+  
+  const emailInput = byId("email");
+  if (emailInput) emailInput.value = session.email || "";
+}
+
+/**
+ * Apply query parameters to inputs
+ */
+function applyQueryParams_() {
+  const params = new URLSearchParams(window.location.search);
+  const apiUrl = params.get("api_url");
+  const apiKey = params.get("api_key");
+  const email = params.get("email");
+  
+  const apiUrlInput = document.getElementById("api_url");
+  if (apiUrl && apiUrlInput) apiUrlInput.value = apiUrl;
+  
+  if (apiKey) {
+    const apiKeyInput = byId("api_key");
+    if (apiKeyInput) apiKeyInput.value = apiKey;
+  }
+  
+  if (email) {
+    const emailInput = byId("email");
+    if (emailInput) emailInput.value = email;
+  }
+}
+
+/**
+ * Reset session (logout)
+ */
+function resetSession() {
+  session = window.AuthSession ? window.AuthSession.defaults(sessionDefaults) : { ...sessionDefaults };
+  if (window.AuthSession) {
+    window.AuthSession.clear();
+  }
+  
+  // Clear cache when logout
+  if (window.CacheManager) {
+    CacheManager.invalidateAll();
+  }
+  
+  syncInputsFromSession();
+  updateSessionUI();
+}
+
+/**
+ * API call helper
+ */
+async function apiCall(action, data = {}) {
+  if (!session.apiUrl) {
+    session.apiUrl = DEFAULT_API_URL;
+  }
+  
+  const res = await fetch(session.apiUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain;charset=utf-8"
+    },
+    body: JSON.stringify({
+      action,
+      api_key: session.apiKey,
+      data
+    })
+  });
+  
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error);
+  return json.data;
+}
+
+/**
+ * Format price to VND currency
+ */
+function formatPrice(price) {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND'
+  }).format(price || 0);
+}
+
+// Export to window for global access
+// Note: DEFAULT_API_URL, sessionDefaults, and session are already in global scope
+// We export them to CommonUtils for reference, but they're also available directly
+window.CommonUtils = {
+  DEFAULT_API_URL,
+  sessionDefaults,
+  get session() { return session; }, // Getter to always return current session
+  set session(value) { session = value; }, // Setter to update session
+  byId,
+  formatShortEmail,
+  setSessionInfo,
+  updateSessionUI,
+  syncInputsFromSession,
+  applyQueryParams_,
+  resetSession,
+  apiCall,
+  formatPrice
+};
+
+// Make functions globally available
+// Note: resetSession is exported but can be overridden by individual pages
+window.byId = byId;
+window.formatShortEmail = formatShortEmail;
+window.setSessionInfo = setSessionInfo;
+window.updateSessionUI = updateSessionUI;
+window.syncInputsFromSession = syncInputsFromSession;
+window.applyQueryParams_ = applyQueryParams_;
+window.resetSession = resetSession;
+window.apiCall = apiCall;
+window.formatPrice = formatPrice;
+
+// Store original resetSession for pages that want to extend it
+window._originalResetSession = resetSession;

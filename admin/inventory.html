@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Dashboard - Inventory</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="inventory.css">
+  <link rel="stylesheet" href="loading.css">
+  <link rel="stylesheet" href="pagination.css">
+  <link rel="stylesheet" href="navigation.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="container">
+    <h1>📦 Quản lý kho</h1>
+    <div class="session-actions">
+      <div id="session-info" class="session-info"></div>
+      <button id="btn-logout" class="btn-logout hidden" type="button">Đăng xuất</button>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <section class="card" id="login-section">
+    <h2>Đăng nhập quản trị</h2>
+    <div class="grid">
+      <div>
+        <label>API KEY</label>
+        <input id="api_key" type="text" placeholder="API KEY">
+      </div>
+      <div>
+        <label>Email owner</label>
+        <input id="email" type="email" placeholder="owner@shop.com">
+      </div>
+      <div>
+        <label>Password owner</label>
+        <input id="password" type="password" placeholder="password">
+      </div>
+    </div>
+    <button id="btn-login">Đăng nhập</button>
+  </section>
+
+  <div class="card-actions top-actions">
+    <a class="btn-secondary link-btn btn-large" href="/admin/products.html">
+      <span class="btn-icon">🧩</span>
+      <span class="btn-text">Sản phẩm</span>
+    </a>
+    <a class="btn-secondary link-btn btn-large" href="/admin/orders.html">
+      <span class="btn-icon">🛒</span>
+      <span class="btn-text">Đơn hàng</span>
+    </a>
+    <a class="btn-secondary link-btn btn-large" href="/admin/reports.html">
+      <span class="btn-icon">📊</span>
+      <span class="btn-text">Báo cáo</span>
+    </a>
+    <a class="btn-secondary link-btn btn-large" href="/admin/inventory-check.html">
+      <span class="btn-icon">🔍</span>
+      <span class="btn-text">Kiểm tra tồn kho</span>
+    </a>
+  </div>
+
+  <section class="card">
+    <div class="card-header">
+      <h2>Điều chỉnh tồn kho</h2>
+    </div>
+    <div class="grid">
+      <div>
+        <label>Sản phẩm</label>
+        <select id="product_id"></select>
+      </div>
+      <div>
+        <label>Loại</label>
+        <select id="movement_type">
+          <option value="IN">Nhập kho (IN)</option>
+          <option value="OUT">Xuất kho (OUT)</option>
+        </select>
+      </div>
+      <div>
+        <label>Số lượng</label>
+        <input id="qty" type="number" step="1" min="1">
+      </div>
+      <div>
+        <label>Giá (tùy chỉnh)</label>
+        <input id="unit_price" type="number" step="0.01" placeholder="Để trống = giá đề xuất">
+      </div>
+      <div>
+        <label>Ghi chú</label>
+        <input id="note" type="text" placeholder="Ví dụ: nhập hàng đợt 1">
+      </div>
+    </div>
+    <button id="btn-create">Tạo phiếu</button>
+  </section>
+
+  <section class="card">
+    <h2>Tồn kho hiện tại</h2>
+    <div class="table-wrap">
+      <table id="summary-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Amount in stock</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="3" class="muted">Đăng nhập để tải dữ liệu...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Lịch sử nhập/xuất</h2>
+    <div class="table-wrap">
+      <table id="movements-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Product</th>
+            <th>Type</th>
+            <th class="text-center">Qty</th>
+            <th class="text-center">Unit Price</th>
+            <th>Note</th>
+            <th>Created at</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="7" class="muted">Đăng nhập để tải dữ liệu...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script src="loading.js"></script>
+<script src="auth.js"></script>
+<script src="cache.js"></script>
+<script src="common.js"></script>
+<script src="pagination.js"></script>
+<script src="inventory.js"></script>
+</body>
+</html>

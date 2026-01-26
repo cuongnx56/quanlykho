@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Tạo Shop Mới - Onboarding</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="create-shop.css">
+  <link rel="stylesheet" href="loading.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="container">
+    <h1>🚀 Tạo Mới</h1>
+    <div class="session-actions">
+      <span class="session-info">Self-service Onboarding</span>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <section class="card">
+    <div class="card-header">
+      <h2>Doanh nghiệp/Cửa hàng</h2>
+      <div class="badge">Miễn phí</div>
+    </div>
+    
+    <div class="grid">
+      <div>
+        <label>Tên *</label>
+        <input id="shop_name" type="text" placeholder="VD: Shop thời trang ABC">
+      </div>
+      <div>
+        <label>Email quản trị *</label>
+        <input id="owner_email" type="email" placeholder="admin@yourshop.com">
+      </div>
+      <div>
+        <label>Password quản trị *</label>
+        <input id="owner_password" type="password" placeholder="Mật khẩu mạnh">
+      </div>
+    </div>
+  </section>
+
+  <input id="sheet_id" type="hidden" value="">
+  <input id="plan" type="hidden" value="basic">
+
+  <div class="actions-center">
+    <button id="btn-create" onclick="onboard()">Tạo ngay</button>
+  </div>
+
+  <div id="result" class="result-box" style="display:none"></div>
+</main>
+
+<script src="loading.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

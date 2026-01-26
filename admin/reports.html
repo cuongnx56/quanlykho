@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Báo cáo & Thống kê</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="reports.css">
+  <link rel="stylesheet" href="loading.css">
+  <link rel="stylesheet" href="navigation.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="container">
+    <h1>📊 Báo cáo & Thống kê</h1>
+    <div class="session-actions">
+      <div id="session-info" class="session-info"></div>
+      <button id="btn-logout" class="btn-logout hidden" type="button">Đăng xuất</button>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <section class="card" id="login-section">
+    <h2>Đăng nhập quản trị</h2>
+    <div class="grid">
+      <div>
+        <label>API KEY</label>
+        <input id="api_key" type="text" placeholder="API KEY">
+      </div>
+      <div>
+        <label>Email owner</label>
+        <input id="email" type="email" placeholder="owner@shop.com">
+      </div>
+      <div>
+        <label>Password owner</label>
+        <input id="password" type="password" placeholder="password">
+      </div>
+    </div>
+    <button id="btn-login">Đăng nhập</button>
+  </section>
+
+  <div class="card-actions top-actions">
+    <a class="btn-secondary link-btn btn-large" href="/admin/products.html">
+      <span class="btn-icon">🧩</span>
+      <span class="btn-text">Sản phẩm</span>
+    </a>
+    <a class="btn-secondary link-btn btn-large" href="/admin/orders.html">
+      <span class="btn-icon">🛒</span>
+      <span class="btn-text">Đơn hàng</span>
+    </a>
+    <a class="btn-secondary link-btn btn-large" href="/admin/inventory.html">
+      <span class="btn-icon">📦</span>
+      <span class="btn-text">Quản lý kho</span>
+    </a>
+    <a class="btn-secondary link-btn btn-large" href="/admin/inventory-check.html">
+      <span class="btn-icon">🔍</span>
+      <span class="btn-text">Kiểm tra tồn kho</span>
+    </a>
+  </div>
+
+  <!-- Dashboard Tổng quan -->
+  <section class="card">
+    <h2>📈 Tổng quan</h2>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="total-products">-</div>
+        <div class="stat-label">Tổng sản phẩm</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="total-stock">-</div>
+        <div class="stat-label">Tổng tồn kho</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="total-value">-</div>
+        <div class="stat-label">Giá trị tồn kho</div>
+      </div>
+      <div class="stat-card alert">
+        <div class="stat-value" id="low-stock-count">-</div>
+        <div class="stat-label">Sản phẩm sắp hết</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Hàng sắp hết -->
+  <section class="card">
+    <div class="card-header">
+      <h2>⚠️ Hàng sắp hết (≤ 10)</h2>
+      <div class="filter-group">
+        <label>Ngưỡng:</label>
+        <input id="threshold" type="number" value="10" min="0" style="width: 80px;">
+        <button id="btn-refresh-low-stock" class="btn-small">Làm mới</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="low-stock-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th class="text-center">Tồn</th>
+            <th class="text-center">Giá</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="4" class="muted">Đăng nhập để tải dữ liệu...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Giá trị tồn kho -->
+  <section class="card">
+    <div class="card-header">
+      <h2>💰 Giá trị tồn kho chi tiết</h2>
+      <div class="summary-total">
+        Tổng cộng: <strong id="grand-total">-</strong>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="stock-value-table" class="detail-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th class="text-center">Tồn hiện tại</th>
+            <th class="text-center">Giá trị nhập</th>
+            <th class="text-center">Giá trị xuất</th>
+            <th class="text-center">Giá trị tồn</th>
+            <th class="text-center">Chi tiết</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="7" class="muted">Đăng nhập để tải dữ liệu...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Báo cáo nhập xuất tồn -->
+  <section class="card">
+    <div class="card-header">
+      <h2>📦 Báo cáo nhập - xuất - tồn</h2>
+      <div class="filter-group">
+        <label>Từ:</label>
+        <input id="from-date" type="date">
+        <label>Đến:</label>
+        <input id="to-date" type="date">
+        <button id="btn-filter-movement" class="btn-small">Lọc</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="movement-report-table">
+        <thead>
+          <tr>
+            <th>Product ID</th>
+            <th class="text-center">Nhập (SL)</th>
+            <th class="text-center">Nhập (Giá trị)</th>
+            <th class="text-center">Xuất (SL)</th>
+            <th class="text-center">Xuất (Giá trị)</th>
+            <th class="text-center">Điều chỉnh</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="6" class="muted">Đăng nhập để tải dữ liệu...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Báo cáo doanh thu -->
+  <section class="card">
+    <div class="card-header">
+      <h2>💰 Báo cáo doanh thu</h2>
+      <div class="filter-group">
+        <label>Nhóm theo:</label>
+        <select id="sales-period" style="width: 120px;">
+          <option value="day">Ngày</option>
+          <option value="week">Tuần</option>
+          <option value="month" selected>Tháng</option>
+        </select>
+        <label>Từ:</label>
+        <input id="sales-from-date" type="date">
+        <label>Đến:</label>
+        <input id="sales-to-date" type="date">
+        <button id="btn-load-sales" class="btn-small">Tải báo cáo</button>
+      </div>
+    </div>
+    
+    <!-- Summary Stats -->
+    <div class="sales-summary">
+      <div class="summary-item">
+        <div class="summary-label">Tổng doanh thu</div>
+        <div class="summary-value" id="sales-total-revenue">-</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">Tổng đơn hàng</div>
+        <div class="summary-value" id="sales-total-orders">-</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">Giá trị đơn TB</div>
+        <div class="summary-value" id="sales-avg-order">-</div>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="chart-container">
+      <canvas id="sales-chart"></canvas>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <table id="sales-report-table">
+        <thead>
+          <tr>
+            <th>Thời gian</th>
+            <th class="text-center">Doanh thu</th>
+            <th class="text-center">Số đơn hàng</th>
+            <th class="text-center">Giá trị đơn TB</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="4" class="muted">Chọn period và nhấn "Tải báo cáo" để xem dữ liệu...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="loading.js"></script>
+<script src="auth.js"></script>
+<script src="cache.js"></script>
+<script src="common.js"></script>
+<script src="reports.js"></script>
+</body>
+</html>
