@@ -53,9 +53,9 @@ async function login() {
   await loadData(urlParams.page);
 }
 
-async function loadData(page = 1) {
-  // Get page from URL if available
-  if (page === 1) {
+async function loadData(page) {
+  // Only read from URL when caller doesn't explicitly pass a page
+  if (page == null) {
     const urlParams = Pagination.getParamsFromURL();
     page = urlParams.page;
   }
