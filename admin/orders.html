@@ -70,7 +70,6 @@
       <table id="orders-table">
         <thead>
           <tr>
-            <th>ID</th>
             <th>Customer</th>
             <th class="text-center">Tổng tiền</th>
             <th class="text-center">Status</th>
@@ -79,7 +78,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr><td colspan="6" class="muted">Đăng nhập để tải dữ liệu...</td></tr>
+          <tr><td colspan="5" class="muted">Đăng nhập để tải dữ liệu...</td></tr>
         </tbody>
       </table>
       <div id="orders-pagination"></div>
@@ -100,6 +99,10 @@
         <div>
           <label>Customer ID *</label>
           <input id="field-customer" type="text" placeholder="customer_id hoặc tên/sdt">
+        </div>
+        <div>
+          <label>Ngày giờ đặt hàng</label>
+          <input id="field-order-date" type="datetime-local">
         </div>
       </div>
     </div>
