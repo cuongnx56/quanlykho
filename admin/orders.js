@@ -77,9 +77,9 @@ async function login() {
   await loadData(urlParams.page);
 }
 
-async function loadData(page = 1) {
-  // Get page from URL if available
-  if (page === 1) {
+async function loadData(page) {
+  // Only read from URL when caller doesn't explicitly pass a page
+  if (page == null) {
     const urlParams = Pagination.getParamsFromURL();
     page = urlParams.page;
   }
@@ -149,7 +149,7 @@ function renderPagination() {
 function renderOrders() {
   const tbody = byId("orders-table").querySelector("tbody");
   if (!orders.length) {
-    tbody.innerHTML = `<tr><td colspan="6" class="muted">Chưa có đơn hàng</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="muted">Chưa có đơn hàng</td></tr>`;
     return;
   }
 
@@ -160,7 +160,6 @@ function renderOrders() {
     
     return `
       <tr>
-        <td>${order.id || ""}</td>
         <td>${order.customer || ""}</td>
         <td class="text-center">${formatPrice(order.total || 0)}</td>
         <td class="text-center"><span class="status-badge ${statusClass}">${status}</span></td>
@@ -361,17 +360,66 @@ function updateOrderTotal() {
 
 function clearOrderForm() {
   byId("field-customer").value = "";
+  const dateEl = byId("field-order-date");
+  if (dateEl) dateEl.value = "";
   byId("items-container").innerHTML = "";
   currentItems = [];
   byId("order-total").textContent = formatPrice(0);
 }
 
+function getNowDateTimeLocal_() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+}
+
+function isValidDateTimeLocal_(s) {
+  // Format: yyyy-MM-ddTHH:mm hoặc yyyy-MM-ddTHH:mm:ss
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(s)) return false;
+  try {
+    const dt = new Date(s);
+    return !isNaN(dt.getTime());
+  } catch (e) {
+    return false;
+  }
+}
+
 async function saveOrder() {
   const customerId = byId("field-customer").value.trim();
+  const dateInput = byId("field-order-date");
+  let orderDateTime = (dateInput && dateInput.value) ? String(dateInput.value).trim() : "";
   
   if (!customerId) {
     alert("Vui lòng nhập Customer ID");
     return;
+  }
+
+  if (!orderDateTime) {
+    orderDateTime = getNowDateTimeLocal_();
+  }
+  // Convert datetime-local format (yyyy-MM-ddTHH:mm) to yyyy-MM-dd HH:mm:ss for backend
+  if (!isValidDateTimeLocal_(orderDateTime)) {
+    alert("Ngày giờ đặt hàng không hợp lệ. Vui lòng nhập đúng định dạng.");
+    return;
+  }
+  
+  // Convert to format backend expects: yyyy-MM-dd HH:mm:ss
+  // datetime-local gives yyyy-MM-ddTHH:mm, we need to add seconds and replace T with space
+  let orderDate = orderDateTime;
+  if (orderDateTime.includes("T")) {
+    const parts = orderDateTime.split("T");
+    const datePart = parts[0];
+    const timePart = parts[1] || "00:00";
+    // Ensure time has seconds
+    const timeParts = timePart.split(":");
+    const hh = timeParts[0] || "00";
+    const mm = timeParts[1] || "00";
+    const ss = timeParts[2] || "00";
+    orderDate = `${datePart} ${hh}:${mm}:${ss}`;
   }
   
   const items = currentItems.filter(item => item && item.product_id && item.qty > 0);
@@ -381,9 +429,24 @@ async function saveOrder() {
     return;
   }
 
+  // Validate qty & price
+  for (const it of items) {
+    const qty = Number(it.qty);
+    const price = Number(it.price);
+    if (!Number.isFinite(qty) || qty <= 0 || Math.floor(qty) !== qty) {
+      alert("Số lượng không hợp lệ (phải là số nguyên > 0).");
+      return;
+    }
+    if (!Number.isFinite(price) || price < 0) {
+      alert("Giá không hợp lệ (phải là số >= 0).");
+      return;
+    }
+  }
+
   await apiCall("orders.create", {
     customer: customerId,
-    items: items
+    items: items,
+    created_at: orderDate // Format: yyyy-MM-dd HH:mm:ss
   });
 
   // ✅ Invalidate cache after create
@@ -419,6 +482,11 @@ byId("btn-logout").addEventListener("click", () => {
 
 byId("btn-new").addEventListener("click", () => {
   clearOrderForm();
+  // Auto-fill datetime-local với ngày giờ hiện tại
+  const dateEl = byId("field-order-date");
+  if (dateEl) {
+    dateEl.value = getNowDateTimeLocal_();
+  }
   addItemRow();
   openModal();
 });
