@@ -1,0 +1,429 @@
+/* Invoices Page Styles */
+/* Base styles from products.css for consistency */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: system-ui, sans-serif;
+  background: #f5f6f8;
+  color: #0f172a;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.topbar {
+  background: #111827;
+  color: #fff;
+  padding: 16px 0;
+}
+
+.topbar .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.session-info {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.session-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-logout {
+  margin: 0;
+  padding: 6px 12px;
+  font-size: 13px;
+  background: #ef4444;
+}
+
+.btn-logout.hidden {
+  display: none;
+}
+
+.card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+}
+
+.card.hidden {
+  display: none;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.card-header h2 {
+  font-size: 18px;
+  margin: 0;
+}
+
+h2 {
+  font-size: 18px;
+}
+
+label {
+  display: block;
+  margin: 12px 0 6px;
+  font-size: 14px;
+  color: #334155;
+}
+
+input, textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 14px;
+  background: #fff;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px 18px;
+}
+
+button {
+  margin-top: 16px;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead {
+  background: #f8f9fa;
+}
+
+th, td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #dee2e6;
+}
+
+th.text-center, td.text-center {
+  text-align: center;
+}
+
+th.text-right, td.text-right {
+  text-align: right;
+}
+
+tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.btn-action {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  margin: 0 0.25rem;
+}
+
+.btn-action:hover {
+  background: #0056b3;
+}
+
+.btn-action.view {
+  background: #28a745;
+}
+
+.btn-action.view:hover {
+  background: #218838;
+}
+
+/* Invoice Modal */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  overflow: auto;
+}
+
+.modal.show {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.invoice-content {
+  background: white;
+  margin: 2rem auto;
+  max-width: 800px;
+  width: 90%;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.modal-header h2 {
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+  color: #6c757d;
+  line-height: 1;
+}
+
+.modal-close:hover {
+  color: #000;
+}
+
+.invoice-body {
+  padding: 2rem;
+}
+
+.invoice-print {
+  font-family: Arial, sans-serif;
+}
+
+.invoice-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #000;
+}
+
+.shop-info h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.5rem;
+}
+
+.shop-info p {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+}
+
+.invoice-title {
+  text-align: right;
+}
+
+.invoice-title h2 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.invoice-title .invoice-number {
+  font-size: 1.2rem;
+  margin-top: 0.5rem;
+}
+
+.invoice-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin: 2rem 0;
+}
+
+.customer-info, .invoice-details {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 4px;
+}
+
+.customer-info h4, .invoice-details h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  color: #495057;
+}
+
+.customer-info p, .invoice-details p {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+}
+
+.invoice-items {
+  margin: 2rem 0;
+}
+
+.invoice-items table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.invoice-items th {
+  background: #f8f9fa;
+  padding: 0.75rem;
+  text-align: left;
+  border: 1px solid #dee2e6;
+}
+
+.invoice-items td {
+  padding: 0.75rem;
+  border: 1px solid #dee2e6;
+}
+
+.invoice-items .text-right {
+  text-align: right;
+}
+
+.invoice-items .text-center {
+  text-align: center;
+}
+
+.invoice-totals {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.invoice-totals table {
+  width: 300px;
+}
+
+.invoice-totals td {
+  padding: 0.5rem;
+  border: none;
+}
+
+.invoice-totals .label {
+  text-align: right;
+  font-weight: bold;
+}
+
+.invoice-totals .value {
+  text-align: right;
+  font-size: 1.1rem;
+}
+
+.invoice-totals .total-row {
+  border-top: 2px solid #000;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.invoice-signature {
+  margin-top: 2.5rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.signature-block {
+  width: 320px;
+  text-align: center;
+}
+
+.signature-title {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #111827;
+}
+
+.signature-note {
+  margin-top: 0.25rem;
+  font-size: 0.85rem;
+  color: #6c757d;
+}
+
+.signature-line {
+  margin: 3.2rem auto 0;
+  width: 80%;
+  border-bottom: 1px solid #111827;
+}
+
+.invoice-footer {
+  margin-top: 3rem;
+  padding-top: 1rem;
+  border-top: 1px solid #dee2e6;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-top: 1px solid #dee2e6;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+}
+
+/* Print styles */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  .invoice-print, .invoice-print * {
+    visibility: visible;
+  }
+  
+  .invoice-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  
+  .modal-footer, .modal-close {
+    display: none !important;
+  }
+}
+
+/* Navigation buttons - styles from navigation.css */

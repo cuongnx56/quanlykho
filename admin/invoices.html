@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Quản lý Hóa đơn</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="invoices.css">
+  <link rel="stylesheet" href="loading.css">
+  <link rel="stylesheet" href="pagination.css">
+  <link rel="stylesheet" href="navigation.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="container">
+    <h1>🧾 Hóa đơn</h1>
+    <div class="session-actions">
+    <div id="session-info" class="session-info"></div>
+      <button id="btn-logout" class="btn-logout hidden" type="button">Đăng xuất</button>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <section class="card" id="login-section">
+    <h2>Đăng nhập quản trị</h2>
+    <div class="grid">
+      <div>
+        <label>API KEY</label>
+        <input id="api_key" type="text" placeholder="API KEY">
+      </div>
+      <div>
+        <label>Email owner</label>
+        <input id="email" type="email" placeholder="owner@shop.com">
+      </div>
+      <div>
+        <label>Password owner</label>
+        <input id="password" type="password" placeholder="password">
+      </div>
+    </div>
+    <button id="btn-login">Đăng nhập</button>
+  </section>
+
+  <div class="card-actions top-actions">
+    <a class="btn-secondary link-btn btn-large" href="/admin/products.html">
+      <span class="btn-icon">🧩</span>
+      <span class="btn-text">Sản phẩm</span>
+    </a>
+    <a class="btn-secondary link-btn btn-large" href="/admin/orders.html">
+      <span class="btn-icon">🛒</span>
+      <span class="btn-text">Đơn hàng</span>
+    </a>
+    <a class="btn-secondary link-btn btn-large" href="/admin/inventory.html">
+      <span class="btn-icon">📦</span>
+      <span class="btn-text">Quản lý kho</span>
+    </a>
+    <a class="btn-secondary link-btn btn-large" href="/admin/reports.html">
+      <span class="btn-icon">📊</span>
+      <span class="btn-text">Báo cáo</span>
+    </a>
+    <a class="btn-secondary link-btn btn-large" href="/admin/settings.html">
+      <span class="btn-icon">⚙️</span>
+      <span class="btn-text">Cài đặt</span>
+    </a>
+    <a class="btn-secondary link-btn btn-large" href="/admin/inventory-check.html">
+      <span class="btn-icon">🔍</span>
+      <span class="btn-text">Kiểm tra tồn kho</span>
+    </a>
+  </div>
+
+  <section class="card">
+    <div class="card-header">
+      <h2>Danh sách Hóa đơn</h2>
+    </div>
+
+    <div class="table-wrap">
+      <table id="invoices-table">
+        <thead>
+          <tr>
+            <th>Số HĐ</th>
+            <th>Order ID</th>
+            <th>Khách hàng</th>
+            <th class="text-right">Tổng tiền</th>
+            <th>Ngày tạo</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="6" class="text-center">Đang tải...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="pagination" class="pagination"></div>
+  </section>
+</main>
+
+<!-- Modal xem/In hóa đơn -->
+<div id="invoice-modal" class="modal">
+  <div class="modal-content invoice-content">
+    <div class="modal-header">
+      <h2>Hóa đơn</h2>
+      <button class="modal-close" onclick="closeInvoiceModal()">&times;</button>
+    </div>
+    <div id="invoice-body" class="invoice-body">
+      <!-- Invoice content will be rendered here -->
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="printInvoice()">🖨️ In hóa đơn</button>
+      <button class="btn-secondary" onclick="closeInvoiceModal()">Đóng</button>
+    </div>
+  </div>
+</div>
+
+<script src="common.js"></script>
+<script src="auth.js"></script>
+<script src="loading.js"></script>
+<script src="pagination.js"></script>
+<script src="cache.js"></script>
+<script src="invoices.js"></script>
+
+</body>
+</html>

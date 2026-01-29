@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Cài đặt</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="settings.css">
+  <link rel="stylesheet" href="loading.css">
+  <link rel="stylesheet" href="navigation.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="container">
+    <h1>⚙️ Cài đặt</h1>
+    <div class="session-actions">
+    <div id="session-info" class="session-info"></div>
+      <button id="btn-logout" class="btn-logout hidden" type="button">Đăng xuất</button>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <section class="card" id="login-section">
+    <h2>Đăng nhập quản trị</h2>
+    <div class="grid">
+      <div>
+        <label>API KEY</label>
+        <input id="api_key" type="text" placeholder="API KEY">
+      </div>
+      <div>
+        <label>Email owner</label>
+        <input id="email" type="email" placeholder="owner@shop.com">
+      </div>
+      <div>
+        <label>Password owner</label>
+        <input id="password" type="password" placeholder="password">
+      </div>
+    </div>
+    <button id="btn-login">Đăng nhập</button>
+  </section>
+
+  <div class="card-actions top-actions">
+    <a class="btn-secondary link-btn btn-large" href="/admin/products.html">
+      <span class="btn-icon">🧩</span>
+      <span class="btn-text">Sản phẩm</span>
+    </a>
+    <a class="btn-secondary link-btn btn-large" href="/admin/orders.html">
+      <span class="btn-icon">🛒</span>
+      <span class="btn-text">Đơn hàng</span>
+    </a>
+    <a class="btn-secondary link-btn btn-large" href="/admin/inventory.html">
+      <span class="btn-icon">📦</span>
+      <span class="btn-text">Quản lý kho</span>
+    </a>
+    <a class="btn-secondary link-btn btn-large" href="/admin/reports.html">
+      <span class="btn-icon">📊</span>
+      <span class="btn-text">Báo cáo</span>
+    </a>
+    <a class="btn-secondary link-btn btn-large" href="/admin/invoices.html">
+      <span class="btn-icon">🧾</span>
+      <span class="btn-text">Hóa đơn</span>
+    </a>
+    <a class="btn-secondary link-btn btn-large" href="/admin/inventory-check.html">
+      <span class="btn-icon">🔍</span>
+      <span class="btn-text">Kiểm tra tồn kho</span>
+    </a>
+  </div>
+
+  <section class="card" id="settings-section" style="display: none;">
+    <div class="card-header">
+      <h2>Thông tin Cửa hàng</h2>
+      <p class="subtitle">Thông tin này sẽ được sử dụng trong hóa đơn và các tài liệu khác</p>
+    </div>
+
+    <form id="settings-form">
+      <div class="form-group">
+        <label for="shop_name">Tên cửa hàng *</label>
+        <input type="text" id="shop_name" name="shop_name" placeholder="VD: Cửa hàng ABC" required>
+        <small>Tên cửa hàng sẽ hiển thị trên hóa đơn</small>
+      </div>
+
+      <div class="form-group">
+        <label for="shop_address">Địa chỉ</label>
+        <textarea id="shop_address" name="shop_address" rows="3" placeholder="VD: 123 Đường ABC, Phường XYZ, Quận 1, TP.HCM"></textarea>
+        <small>Địa chỉ cửa hàng</small>
+      </div>
+
+      <div class="form-group">
+        <label for="shop_phone">Số điện thoại</label>
+        <input type="tel" id="shop_phone" name="shop_phone" placeholder="VD: 0901234567">
+        <small>Số điện thoại liên hệ</small>
+      </div>
+
+      <div class="form-group">
+        <label for="shop_email">Email</label>
+        <input type="email" id="shop_email" name="shop_email" placeholder="VD: contact@shop.com">
+        <small>Email liên hệ</small>
+      </div>
+
+      <div class="form-group">
+        <label for="shop_tax_code">Mã số thuế</label>
+        <input type="text" id="shop_tax_code" name="shop_tax_code" placeholder="VD: 0123456789">
+        <small>Mã số thuế (nếu có)</small>
+      </div>
+
+      <div class="form-group">
+        <label for="currency">Đơn vị tiền tệ</label>
+        <select id="currency" name="currency">
+          <option value="VND">VND (Việt Nam Đồng)</option>
+          <option value="USD">USD (US Dollar)</option>
+          <option value="EUR">EUR (Euro)</option>
+        </select>
+        <small>Đơn vị tiền tệ mặc định</small>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn-primary" id="btn-save">💾 Lưu cài đặt</button>
+        <button type="button" class="btn-secondary" id="btn-cancel">Hủy</button>
+      </div>
+    </form>
+  </section>
+</main>
+
+<script src="common.js"></script>
+<script src="auth.js"></script>
+<script src="loading.js"></script>
+<script src="cache.js"></script>
+<script src="settings.js"></script>
+
+</body>
+</html>
