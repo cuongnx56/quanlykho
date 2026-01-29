@@ -117,7 +117,7 @@ function renderProducts() {
   }
 
   tbody.innerHTML = products.map(p => `
-    <tr>
+    <tr data-product-id="${p.id}">
       <td>${p.id || ""}</td>
       <td>${p.title || p.name || ""}</td>
       <td>${p.price || ""}</td>
@@ -125,13 +125,24 @@ function renderProducts() {
       <td>${p.availability || ""}</td>
       <td>${p.brand || ""}</td>
       <td>${p.mpn || ""}</td>
-      <td><button class="action-btn" data-id="${p.id}">Sửa</button></td>
+      <td>
+        <button class="action-btn" data-id="${p.id}">Sửa</button>
+        <button class="action-btn btn-danger" data-id="${p.id}" data-action="delete" style="margin-left: 0.5rem;">Xóa</button>
+      </td>
     </tr>
   `).join("");
 
   Array.from(tbody.querySelectorAll(".action-btn")).forEach(btn => {
     btn.addEventListener("click", () => {
       const id = btn.getAttribute("data-id");
+      const action = btn.getAttribute("data-action");
+      
+      if (action === "delete") {
+        deleteProduct(id);
+        return;
+      }
+      
+      // Edit action
       const product = products.find(p => p.id === id);
       if (!product) return;
       editMode = "edit";
@@ -143,6 +154,92 @@ function renderProducts() {
       openModal();
     });
   });
+}
+
+function updateProductInList(product) {
+  // Update in products array
+  const index = products.findIndex(p => p.id === product.id);
+  if (index !== -1) {
+    products[index] = product;
+  }
+  
+  // Update in DOM
+  const tbody = byId("products-table").querySelector("tbody");
+  const row = tbody.querySelector(`tr[data-product-id="${product.id}"]`);
+  if (row) {
+    row.innerHTML = `
+      <td>${product.id || ""}</td>
+      <td>${product.title || product.name || ""}</td>
+      <td>${product.price || ""}</td>
+      <td>${product.amount_in_stock || ""}</td>
+      <td>${product.availability || ""}</td>
+      <td>${product.brand || ""}</td>
+      <td>${product.mpn || ""}</td>
+      <td><button class="action-btn" data-id="${product.id}">Sửa</button></td>
+    `;
+    // Re-attach event listener
+    const btn = row.querySelector(".action-btn");
+    if (btn) {
+      btn.addEventListener("click", () => {
+        editMode = "edit";
+        fillForm(product);
+        byId("modal-title").textContent = "Sửa sản phẩm";
+        const wrapper = byId("field-amount-in-stock-wrapper");
+        if (wrapper) wrapper.style.display = "none";
+        openModal();
+      });
+    }
+  }
+}
+
+function addProductToList(product) {
+  // Add to products array (at the beginning if on page 1)
+  if (currentPage === 1) {
+    products.unshift(product);
+    // If exceeds page limit, remove last item
+    if (products.length > itemsPerPage) {
+      products.pop();
+    }
+  }
+  
+  // Update DOM
+  const tbody = byId("products-table").querySelector("tbody");
+  if (tbody && products.length > 0) {
+    // Remove "no products" message if exists
+    if (tbody.querySelector(".muted")) {
+      tbody.innerHTML = "";
+    }
+    
+    // Add new row at the top
+    const newRow = document.createElement("tr");
+    newRow.setAttribute("data-product-id", product.id);
+    newRow.innerHTML = `
+      <td>${product.id || ""}</td>
+      <td>${product.title || product.name || ""}</td>
+      <td>${product.price || ""}</td>
+      <td>${product.amount_in_stock || ""}</td>
+      <td>${product.availability || ""}</td>
+      <td>${product.brand || ""}</td>
+      <td>${product.mpn || ""}</td>
+      <td><button class="action-btn" data-id="${product.id}">Sửa</button></td>
+    `;
+    tbody.insertBefore(newRow, tbody.firstChild);
+    
+    // Re-attach event listeners for all buttons
+    Array.from(tbody.querySelectorAll(".action-btn")).forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-id");
+        const p = products.find(pr => pr.id === id);
+        if (!p) return;
+        editMode = "edit";
+        fillForm(p);
+        byId("modal-title").textContent = "Sửa sản phẩm";
+        const wrapper = byId("field-amount-in-stock-wrapper");
+        if (wrapper) wrapper.style.display = "none";
+        openModal();
+      });
+    });
+  }
 }
 
 async function loadProducts(page) {
@@ -222,17 +319,18 @@ async function saveProduct() {
     return;
   }
 
+  let savedProduct;
   try {
     if (editMode === "create") {
       data.token = session.token;
-      await apiCall("products.create", data);
+      savedProduct = await apiCall("products.create", data);
     } else {
       if (!data.id) {
         alert("Thiếu ID sản phẩm");
         return;
       }
       data.token = session.token;
-      await apiCall("products.update", data);
+      savedProduct = await apiCall("products.update", data);
     }
 
     // ✅ Invalidate cache after create/update
@@ -240,7 +338,22 @@ async function saveProduct() {
     
     closeModal();
     clearForm();
-    await loadProducts(currentPage); // Stay on current page
+    
+    // ✅ Update UI directly instead of reloading
+    if (editMode === "create") {
+      // Add new product to current page if on page 1, otherwise reload
+      if (currentPage === 1 && products.length < itemsPerPage) {
+        addProductToList(savedProduct);
+        totalProducts++;
+        totalPages = Math.ceil(totalProducts / itemsPerPage);
+        renderPagination();
+      } else {
+        await loadProducts(currentPage);
+      }
+    } else {
+      // Update existing product in list
+      updateProductInList(savedProduct);
+    }
   } catch (err) {
     // If unauthorized, suggest re-login
     if (err.message && (err.message.includes("Unauthorized") || err.message.includes("Forbidden"))) {
@@ -250,6 +363,85 @@ async function saveProduct() {
       alert("Lỗi: " + err.message);
     }
     throw err;
+  }
+}
+
+async function deleteProduct(productId) {
+  if (!productId) return;
+  
+  const product = products.find(p => p.id === productId);
+  if (!product) {
+    alert("Không tìm thấy sản phẩm");
+    return;
+  }
+  
+  const confirmMsg = `Xác nhận xóa sản phẩm "${product.id}"?\n\nLưu ý: Hành động này không thể hoàn tác.`;
+  if (!confirm(confirmMsg)) return;
+  
+  if (!session.token) {
+    alert("Vui lòng đăng nhập trước");
+    return;
+  }
+  
+  if (!session.apiKey) {
+    alert("Vui lòng đăng nhập lại (thiếu API key)");
+    return;
+  }
+  
+  Loading.show("Đang xóa sản phẩm...");
+  try {
+    await apiCall("products.delete", {
+      token: session.token,
+      id: productId
+    });
+    
+    // ✅ Invalidate cache after delete
+    CacheManager.invalidateOnProductChange();
+    
+    // ✅ Remove product from UI
+    removeProductFromList(productId);
+    
+    // Update totals
+    totalProducts--;
+    totalPages = Math.ceil(totalProducts / itemsPerPage);
+    
+    // If current page becomes empty and not page 1, go to previous page
+    if (products.length === 0 && currentPage > 1) {
+      await loadProducts(currentPage - 1);
+    } else {
+      renderPagination();
+    }
+    
+    alert("✅ Đã xóa sản phẩm thành công");
+  } catch (err) {
+    if (err.message && (err.message.includes("Unauthorized") || err.message.includes("Forbidden"))) {
+      alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.\n\n" + err.message);
+      resetSession();
+    } else {
+      alert("Lỗi: " + err.message);
+    }
+  } finally {
+    Loading.hide();
+  }
+}
+
+function removeProductFromList(productId) {
+  // Remove from products array
+  const index = products.findIndex(p => p.id === productId);
+  if (index !== -1) {
+    products.splice(index, 1);
+  }
+  
+  // Remove from DOM
+  const tbody = byId("products-table").querySelector("tbody");
+  const row = tbody.querySelector(`tr[data-product-id="${productId}"]`);
+  if (row) {
+    row.remove();
+  }
+  
+  // If no products left, show empty message
+  if (products.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" class="muted">Chưa có sản phẩm</td></tr>`;
   }
 }
 
