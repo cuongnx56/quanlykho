@@ -150,7 +150,7 @@ function renderMovements() {
     return;
   }
   tbody.innerHTML = movements.map(item => `
-    <tr>
+    <tr data-movement-id="${item.id}">
       <td>${item.id || ""}</td>
       <td>${item.product_id || ""}</td>
       <td>${item.type || ""}</td>
@@ -160,6 +160,40 @@ function renderMovements() {
       <td>${item.created_at || ""}</td>
     </tr>
   `).join("");
+}
+
+function addMovementToList(movement) {
+  // Add to movements array (at the beginning if on page 1)
+  if (currentPage === 1) {
+    movements.unshift(movement);
+    // If exceeds page limit, remove last item
+    if (movements.length > itemsPerPage) {
+      movements.pop();
+    }
+  }
+  
+  // Update DOM
+  const tbody = byId("movements-table").querySelector("tbody");
+  if (tbody && movements.length > 0) {
+    // Remove "no movements" message if exists
+    if (tbody.querySelector(".muted")) {
+      tbody.innerHTML = "";
+    }
+    
+    // Add new row at the top
+    const newRow = document.createElement("tr");
+    newRow.setAttribute("data-movement-id", movement.id);
+    newRow.innerHTML = `
+      <td>${movement.id || ""}</td>
+      <td>${movement.product_id || ""}</td>
+      <td>${movement.type || ""}</td>
+      <td class="text-center">${movement.qty || ""}</td>
+      <td class="text-center">${formatPrice(movement.unit_price || 0)}</td>
+      <td>${movement.note || ""}</td>
+      <td>${movement.created_at || ""}</td>
+    `;
+    tbody.insertBefore(newRow, tbody.firstChild);
+  }
 }
 
 function formatPrice(price) {
@@ -212,7 +246,7 @@ async function createMovement() {
     return;
   }
 
-  await apiCall("inventory.create", {
+  const newMovement = await apiCall("inventory.create", {
     token: session.token,
     product_id: productId,
     type,
@@ -227,8 +261,19 @@ async function createMovement() {
   byId("qty").value = "";
   byId("unit_price").value = "";
   byId("note").value = "";
-  const urlParams = Pagination.getParamsFromURL();
-  await loadData(urlParams.page);
+  
+  // ✅ Add new movement to list instead of reloading
+  if (currentPage === 1 && movements.length < itemsPerPage) {
+    addMovementToList(newMovement);
+    totalMovements++;
+    totalPages = Math.ceil(totalMovements / itemsPerPage);
+    renderPagination();
+    // Reload summary to update stock (summary needs to be reloaded)
+    await loadData(currentPage);
+  } else {
+    const urlParams = Pagination.getParamsFromURL();
+    await loadData(urlParams.page);
+  }
 }
 
 byId("btn-login").addEventListener("click", async () => {
