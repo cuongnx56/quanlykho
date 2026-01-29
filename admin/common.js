@@ -18,6 +18,15 @@ const sessionDefaults = {
 let session = window.AuthSession ? window.AuthSession.load(sessionDefaults) : { ...sessionDefaults };
 
 /**
+ * Reload session from localStorage
+ * Call this when page loads to ensure session is up to date
+ */
+function reloadSession() {
+  session = window.AuthSession ? window.AuthSession.load(sessionDefaults) : { ...sessionDefaults };
+  return session;
+}
+
+/**
  * Get element by ID
  */
 function byId(id) {
@@ -160,6 +169,41 @@ function formatPrice(price) {
   }).format(price || 0);
 }
 
+/**
+ * Login function - shared across all pages
+ */
+async function login() {
+  session.apiUrl = DEFAULT_API_URL;
+  session.apiKey = byId("api_key").value.trim();
+  session.email = byId("email").value.trim();
+  const password = byId("password").value;
+
+  if (!session.apiKey || !session.email || !password) {
+    throw new Error("Vui lòng nhập đủ API KEY, email, password");
+  }
+
+  const data = await apiCall("auth.login", {
+    email: session.email,
+    password
+  });
+
+  session.token = data.token;
+  session.email = data.email;
+  session.role = data.role;
+  
+  // Save to AuthSession
+  if (window.AuthSession) {
+    window.AuthSession.save(session);
+  }
+  
+  // Update common session
+  if (window.CommonUtils) {
+    window.CommonUtils.session = session;
+  }
+  
+  updateSessionUI();
+}
+
 // Export to window for global access
 // Note: DEFAULT_API_URL, sessionDefaults, and session are already in global scope
 // We export them to CommonUtils for reference, but they're also available directly
@@ -176,7 +220,9 @@ window.CommonUtils = {
   applyQueryParams_,
   resetSession,
   apiCall,
-  formatPrice
+  formatPrice,
+  login,
+  reloadSession
 };
 
 // Make functions globally available
@@ -190,6 +236,8 @@ window.applyQueryParams_ = applyQueryParams_;
 window.resetSession = resetSession;
 window.apiCall = apiCall;
 window.formatPrice = formatPrice;
+window.login = login;
+window.reloadSession = reloadSession;
 
 // Store original resetSession for pages that want to extend it
 window._originalResetSession = resetSession;
