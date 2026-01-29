@@ -124,8 +124,18 @@ async function loadData(page) {
       CacheManager.set(productsCacheKey, productsResult);
     }
     
-    // Load customers (no cache for now, usually small dataset)
-    customers = await apiCall("customers.list");
+    // Load customers (check cache)
+    const customersCacheKey = CacheManager.key("customers", "list", 1, 1000);
+    const cachedCustomers = CacheManager.get(customersCacheKey);
+    
+    if (cachedCustomers) {
+      console.log("📦 Using cached customers data");
+      customers = (cachedCustomers.items) ? cachedCustomers.items : (Array.isArray(cachedCustomers) ? cachedCustomers : []);
+    } else {
+      const customersResult = await apiCall("customers.list", { page: 1, limit: 1000 });
+      customers = (customersResult && customersResult.items) ? customersResult.items : (Array.isArray(customersResult) ? customersResult : []);
+      CacheManager.set(customersCacheKey, customersResult);
+    }
     
     renderOrders();
     renderPagination();
@@ -159,8 +169,8 @@ function renderOrders() {
     const actions = getStatusActions(order.id, status);
     
     return `
-      <tr>
-        <td>${order.customer || ""}</td>
+      <tr data-order-id="${order.id}">
+        <td>${order.customer_id || ""}</td>
         <td class="text-center">${formatPrice(order.total || 0)}</td>
         <td class="text-center"><span class="status-badge ${statusClass}">${status}</span></td>
         <td>${order.created_at || ""}</td>
@@ -171,6 +181,34 @@ function renderOrders() {
       </tr>
     `;
   }).join("");
+}
+
+function updateOrderInList(order) {
+  // Update in orders array
+  const index = orders.findIndex(o => o.id === order.id);
+  if (index !== -1) {
+    orders[index] = order;
+  }
+  
+  // Update in DOM
+  const tbody = byId("orders-table").querySelector("tbody");
+  const row = tbody.querySelector(`tr[data-order-id="${order.id}"]`);
+  if (row) {
+    const status = order.status || "NEW";
+    const statusClass = getStatusClass(status);
+    const actions = getStatusActions(order.id, status);
+    
+    row.innerHTML = `
+      <td>${order.customer_id || ""}</td>
+      <td class="text-center">${formatPrice(order.total || 0)}</td>
+      <td class="text-center"><span class="status-badge ${statusClass}">${status}</span></td>
+      <td>${order.created_at || ""}</td>
+      <td class="text-center">
+        <button class="action-btn" onclick="viewOrder('${order.id}')">Xem</button>
+        ${actions}
+      </td>
+    `;
+  }
 }
 
 function getStatusClass(status) {
@@ -191,6 +229,7 @@ function getStatusActions(orderId, status) {
     actions.push(`<button class="action-btn status-btn cancel-btn" onclick="changeStatus('${orderId}', 'CANCEL')">✕ Cancel</button>`);
   } else if (status === "DONE") {
     actions.push(`<button class="action-btn status-btn return-btn" onclick="changeStatus('${orderId}', 'RETURN')">↩ Return</button>`);
+    actions.push(`<button class="action-btn invoice-btn" onclick="createInvoiceFromOrder('${orderId}')" title="Xuất hóa đơn">🧾 Hóa đơn</button>`);
   }
   
   return actions.join(" ");
@@ -207,7 +246,7 @@ async function changeStatus(orderId, newStatus) {
   
   Loading.show("Đang cập nhật trạng thái...");
   try {
-    await apiCall("orders.updateStatus", {
+    const updatedOrder = await apiCall("orders.updateStatus", {
       token: session.token,
       order_id: orderId,
       new_status: newStatus
@@ -216,8 +255,10 @@ async function changeStatus(orderId, newStatus) {
     // ✅ Invalidate cache after status change
     CacheManager.invalidateOnOrderChange();
     
+    // ✅ Update order in list directly instead of reloading
+    updateOrderInList(updatedOrder);
+    
     alert(`✅ Đã chuyển trạng thái sang ${newStatus}`);
-    await loadData(currentPage);
   } catch (err) {
     alert(`❌ Lỗi: ${err.message}`);
   } finally {
@@ -239,12 +280,17 @@ function viewOrder(orderId) {
     itemsHtml = "Không có dữ liệu items";
   }
   
+  let invoiceBtn = "";
+  if (order.status === "DONE") {
+    invoiceBtn = `<button class="btn-secondary" onclick="createInvoiceFromOrder('${order.id}')" style="margin-top: 1rem;">🧾 Xuất hóa đơn</button>`;
+  }
+  
   byId("order-detail-content").innerHTML = `
     <div class="detail-section">
       <span class="detail-label">Order ID:</span> ${order.id}
     </div>
     <div class="detail-section">
-      <span class="detail-label">Customer:</span> ${order.customer}
+      <span class="detail-label">Customer:</span> ${order.customer_id || ""}
     </div>
     <div class="detail-section">
       <span class="detail-label">Status:</span> ${order.status}
@@ -259,9 +305,47 @@ function viewOrder(orderId) {
     <div class="detail-section">
       <span class="detail-label">Tổng tiền:</span> <strong>${formatPrice(order.total || 0)}</strong>
     </div>
+    ${invoiceBtn}
   `;
   
   openDetailModal();
+}
+
+async function createInvoiceFromOrder(orderId) {
+  if (!confirm("Tạo hóa đơn cho đơn hàng này?")) return;
+  
+  Loading.show("Đang tạo hóa đơn...");
+  try {
+    // Prompt for VAT rate (optional)
+    const vatRate = prompt("Nhập % VAT (để trống nếu không có VAT):", "0");
+    const vatRateNum = vatRate ? parseFloat(vatRate) : 0;
+    
+    // Prompt for note (optional)
+    const note = prompt("Ghi chú (để trống nếu không có):", "");
+    
+    const result = await apiCall("invoices.create", {
+      token: session.token,
+      order_id: orderId,
+      vat_rate: vatRateNum,
+      note: note || ""
+    });
+    
+    // ✅ Invalidate invoices cache after create
+    CacheManager.invalidateOnInvoiceChange();
+    
+    alert(`✅ Đã tạo hóa đơn: ${result.invoice_number || result.id}\n\nBạn có muốn xem hóa đơn ngay?`);
+    
+    // Option to view invoice
+    if (confirm("Mở trang quản lý hóa đơn?")) {
+      window.location.href = "/admin/invoices.html";
+    } else {
+      await loadData(currentPage);
+    }
+  } catch (err) {
+    alert(`❌ Lỗi: ${err.message}`);
+  } finally {
+    Loading.hide();
+  }
 }
 
 function addItemRow() {
@@ -444,7 +528,7 @@ async function saveOrder() {
   }
 
   await apiCall("orders.create", {
-    customer: customerId,
+    customer_id: customerId,
     items: items,
     created_at: orderDate // Format: yyyy-MM-dd HH:mm:ss
   });
