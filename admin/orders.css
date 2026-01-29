@@ -334,6 +334,15 @@ th {
   background: #f59e0b;
 }
 
+.invoice-btn {
+  background: #10b981;
+  color: white;
+}
+
+.invoice-btn:hover {
+  background: #059669;
+}
+
 #order-detail-content {
   font-size: 14px;
   line-height: 1.8;
