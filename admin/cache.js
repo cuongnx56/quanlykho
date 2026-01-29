@@ -14,6 +14,7 @@ const CacheManager = {
     PRODUCTS: 15 * 60 * 1000,      // 15 phút
     ORDERS: 15 * 60 * 1000,         // 15 phút
     INVENTORY: 15 * 60 * 1000,      // 15 phút
+    CUSTOMERS: 15 * 60 * 1000,      // 15 phút
     REPORTS: 15 * 60 * 1000,        // 15 phút
     DASHBOARD: 15 * 60 * 1000       // 15 phút
   },
@@ -84,6 +85,7 @@ const CacheManager = {
     if (key.startsWith('products_')) return this.TTL.PRODUCTS;
     if (key.startsWith('orders_')) return this.TTL.ORDERS;
     if (key.startsWith('inventory_')) return this.TTL.INVENTORY;
+    if (key.startsWith('customers_')) return this.TTL.CUSTOMERS;
     if (key.startsWith('reports_')) return this.TTL.REPORTS;
     if (key.startsWith('dashboard_')) return this.TTL.DASHBOARD;
     return 5 * 60 * 1000; // Default 5 minutes
@@ -120,6 +122,7 @@ const CacheManager = {
       if (key.startsWith('products_') || 
           key.startsWith('orders_') || 
           key.startsWith('inventory_') || 
+          key.startsWith('customers_') ||
           key.startsWith('reports_') ||
           key.startsWith('dashboard_') ||
           key.endsWith('_ts')) {
@@ -194,6 +197,15 @@ const CacheManager = {
     this.clear('^reports_inventory_movement');
     this.clear('^reports_dashboard');
     console.log("✅ Cache invalidated: Inventory changed");
+  },
+
+  /**
+   * Invalidate caches when invoice changes
+   */
+  invalidateOnInvoiceChange() {
+    this.clear('^invoices_');
+    this.clear('^invoice_'); // Single invoice cache
+    console.log("✅ Cache invalidated: Invoices changed");
   },
 
   /**
