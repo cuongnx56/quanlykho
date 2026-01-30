@@ -252,12 +252,12 @@ async function loadProducts(page) {
   currentPage = page;
   
   return apiCallWithLoading(async () => {
-    // Check cache first
+    // ✅ Step 1: Check frontend cache first (localStorage)
     const cacheKey = CacheManager.key("products", "list", page, itemsPerPage);
     const cached = CacheManager.get(cacheKey);
     
     if (cached) {
-      console.log("📦 Using cached products data");
+      console.log("📦 Using cached products data (localStorage)");
       products = cached.items || [];
       totalProducts = cached.total || 0;
       totalPages = cached.totalPages || 0;
@@ -269,18 +269,43 @@ async function loadProducts(page) {
       return;
     }
     
-    // Fetch from API
-    const result = await apiCall("products.list", {
-      page: page,
-      limit: itemsPerPage
-    });
+    // ✅ Step 2: Try Cloudflare Worker first (fast, edge network)
+    let result = null;
+    
+    if (WorkerAPI && WorkerAPI.isConfigured()) {
+      try {
+        console.log("🚀 Trying Cloudflare Worker for products.list...");
+        result = await WorkerAPI.productsList({
+          page: page,
+          limit: itemsPerPage
+        });
+        
+        if (result) {
+          console.log("✅ Worker cache HIT! Loaded from Cloudflare KV");
+        } else {
+          console.log("⚠️ Worker cache MISS, falling back to GAS");
+        }
+      } catch (error) {
+        console.error("⚠️ Worker error:", error);
+        console.log("Falling back to GAS...");
+      }
+    }
+    
+    // ✅ Step 3: Fallback to GAS if Worker fails or cache miss
+    if (!result) {
+      console.log("📡 Fetching from GAS /exec endpoint...");
+      result = await apiCall("products.list", {
+        page: page,
+        limit: itemsPerPage
+      });
+    }
     
     products = result.items || [];
     totalProducts = result.total || 0;
     totalPages = result.totalPages || 0;
     currentPage = result.page || 1;
     
-    // Save to cache
+    // Save to frontend cache
     CacheManager.set(cacheKey, result);
     
     renderProducts();
@@ -486,6 +511,14 @@ byId("btn-save").addEventListener("click", async () => {
 byId("btn-logout").addEventListener("click", () => {
   resetSession();
 });
+
+// Initialize WorkerAPI if configured
+if (window.WorkerAPI && window.CommonUtils && window.CommonUtils.WORKER_URL) {
+  WorkerAPI.init(window.CommonUtils.WORKER_URL);
+  console.log("✅ WorkerAPI initialized for READ operations");
+} else if (window.WorkerAPI) {
+  console.log("ℹ️ WorkerAPI available but WORKER_URL not configured. Using GAS only.");
+}
 
 syncInputsFromSession();
 applyQueryParams_();

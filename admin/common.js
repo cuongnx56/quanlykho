@@ -204,11 +204,18 @@ async function login() {
   updateSessionUI();
 }
 
+// Cloudflare Worker URL for READ operations
+// Set this to your deployed Cloudflare Worker URL
+// Example: https://products-api.your-subdomain.workers.dev
+// Leave null to disable Worker (will use GAS only)
+const WORKER_URL = "https://quanlykho-api.nguyenxuancuongk56.workers.dev"; // TODO: Set your Cloudflare Worker URL here
+
 // Export to window for global access
 // Note: DEFAULT_API_URL, sessionDefaults, and session are already in global scope
 // We export them to CommonUtils for reference, but they're also available directly
 window.CommonUtils = {
   DEFAULT_API_URL,
+  WORKER_URL,
   sessionDefaults,
   get session() { return session; }, // Getter to always return current session
   set session(value) { session = value; }, // Setter to update session

@@ -87,27 +87,54 @@ async function loadData(page) {
   currentPage = page;
   
   return apiCallWithLoading(async () => {
-    // Check cache for orders
+    // ✅ Step 1: Check frontend cache first (localStorage)
     const ordersCacheKey = CacheManager.key("orders", "list", page, itemsPerPage);
     const cachedOrders = CacheManager.get(ordersCacheKey);
     
     if (cachedOrders) {
-      console.log("📦 Using cached orders data");
+      console.log("📦 Using cached orders data (localStorage)");
       orders = cachedOrders.items || [];
       totalOrders = cachedOrders.total || 0;
       totalPages = cachedOrders.totalPages || 0;
       currentPage = cachedOrders.page || 1;
     } else {
-      const ordersResult = await apiCall("orders.list", {
-        page: page,
-        limit: itemsPerPage
-      });
+      // ✅ Step 2: Try Cloudflare Worker first (fast, edge network)
+      let ordersResult = null;
+      
+      if (WorkerAPI && WorkerAPI.isConfigured()) {
+        try {
+          console.log("🚀 Trying Cloudflare Worker for orders.list...");
+          ordersResult = await WorkerAPI.ordersList({
+            page: page,
+            limit: itemsPerPage
+          });
+          
+          if (ordersResult) {
+            console.log("✅ Worker cache HIT! Loaded from Cloudflare KV");
+          } else {
+            console.log("⚠️ Worker cache MISS, falling back to GAS");
+          }
+        } catch (error) {
+          console.error("⚠️ Worker error:", error);
+          console.log("Falling back to GAS...");
+        }
+      }
+      
+      // ✅ Step 3: Fallback to GAS if Worker fails or cache miss
+      if (!ordersResult) {
+        console.log("📡 Fetching from GAS /exec endpoint...");
+        ordersResult = await apiCall("orders.list", {
+          page: page,
+          limit: itemsPerPage
+        });
+      }
       
       orders = ordersResult.items || [];
       totalOrders = ordersResult.total || 0;
       totalPages = ordersResult.totalPages || 0;
       currentPage = ordersResult.page || 1;
       
+      // Save to frontend cache
       CacheManager.set(ordersCacheKey, ordersResult);
     }
     
@@ -598,6 +625,14 @@ byId("btn-save").addEventListener("click", async () => {
 byId("btn-add-item").addEventListener("click", () => {
   addItemRow();
 });
+
+// Initialize WorkerAPI if configured
+if (window.WorkerAPI && window.CommonUtils && window.CommonUtils.WORKER_URL) {
+  WorkerAPI.init(window.CommonUtils.WORKER_URL);
+  console.log("✅ WorkerAPI initialized for READ operations");
+} else if (window.WorkerAPI) {
+  console.log("ℹ️ WorkerAPI available but WORKER_URL not configured. Using GAS only.");
+}
 
 syncInputsFromSession();
 applyQueryParams_();
