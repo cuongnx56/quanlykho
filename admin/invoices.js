@@ -31,6 +31,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     window.location.reload();
   });
   
+  // Initialize WorkerAPI if configured
+  if (window.WorkerAPI && window.CommonUtils && window.CommonUtils.WORKER_URL) {
+    WorkerAPI.init(window.CommonUtils.WORKER_URL);
+    console.log("✅ WorkerAPI initialized for READ operations");
+  } else if (window.WorkerAPI) {
+    console.log("ℹ️ WorkerAPI available but WORKER_URL not configured. Using GAS only.");
+  }
+  
   // Load invoices if already logged in
   if (session.token && session.apiKey) {
     await loadInvoices(1);
@@ -48,19 +56,54 @@ async function loadInvoices(page) {
   
   Loading.show("Đang tải hóa đơn...");
   try {
-    const cacheKey = `invoices_list_${page}`;
+    // ✅ Step 1: Check frontend cache first (localStorage)
+    const cacheKey = CacheManager.key("invoices", "list", page, 50);
     let result = CacheManager.get(cacheKey);
     
+    if (result) {
+      console.log("📦 Using cached invoices data (localStorage)");
+      invoices = (result.items) ? result.items : [];
+      renderInvoices();
+      Pagination.render(result, currentPage, loadInvoices);
+      Loading.hide();
+      return;
+    }
+    
+    // ✅ Step 2: Try Cloudflare Worker first (fast, edge network)
+    if (WorkerAPI && WorkerAPI.isConfigured()) {
+      try {
+        console.log("🚀 Trying Cloudflare Worker for invoices.list...");
+        result = await WorkerAPI.invoicesList({
+          page: page,
+          limit: 50
+        });
+        
+        if (result) {
+          console.log("✅ Worker cache HIT! Loaded from Cloudflare KV");
+        } else {
+          console.log("⚠️ Worker cache MISS, falling back to GAS");
+        }
+      } catch (error) {
+        console.error("⚠️ Worker error:", error);
+        console.log("Falling back to GAS...");
+      }
+    }
+    
+    // ✅ Step 3: Fallback to GAS if Worker fails or cache miss
     if (!result) {
+      console.log("📡 Fetching from GAS /exec endpoint...");
       result = await apiCall("invoices.list", {
         token: session.token,
         page: page,
         limit: 50
       });
-      CacheManager.set(cacheKey, result, 300); // 5 minutes
     }
     
     invoices = (result && result.items) ? result.items : [];
+    
+    // Save to frontend cache
+    CacheManager.set(cacheKey, result);
+    
     renderInvoices();
     Pagination.render(result, currentPage, loadInvoices);
   } catch (err) {
