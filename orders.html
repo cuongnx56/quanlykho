@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Dashboard - Orders</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="orders.css">
+  <link rel="stylesheet" href="loading.css">
+  <link rel="stylesheet" href="pagination.css">
+  <link rel="stylesheet" href="navigation.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="container">
+    <h1>🛒 Quản lý đơn hàng</h1>
+    <div class="session-actions">
+      <div id="session-info" class="session-info"></div>
+      <button id="btn-logout" class="btn-logout hidden" type="button">Đăng xuất</button>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <section class="card" id="login-section">
+    <h2>Đăng nhập quản trị</h2>
+    <div class="grid">
+      <div>
+        <label>API KEY</label>
+        <input id="api_key" type="text" placeholder="API KEY">
+      </div>
+      <div>
+        <label>Email owner</label>
+        <input id="email" type="email" placeholder="owner@shop.com">
+      </div>
+      <div>
+        <label>Password owner</label>
+        <input id="password" type="password" placeholder="password">
+      </div>
+    </div>
+    <button id="btn-login">Đăng nhập</button>
+  </section>
+
+  <div class="card-actions top-actions">
+    <a class="btn-secondary link-btn btn-large" href="/admin/products.html">
+      <span class="btn-icon">🧩</span>
+      <span class="btn-text">Sản phẩm</span>
+    </a>
+    <a class="btn-secondary link-btn btn-large" href="/admin/inventory.html">
+      <span class="btn-icon">📦</span>
+      <span class="btn-text">Quản lý kho</span>
+    </a>
+    <a class="btn-secondary link-btn btn-large" href="/admin/reports.html">
+      <span class="btn-icon">📊</span>
+      <span class="btn-text">Báo cáo</span>
+    </a>
+    <a class="btn-secondary link-btn btn-large" href="/admin/invoices.html">
+      <span class="btn-icon">🧾</span>
+      <span class="btn-text">Hóa đơn</span>
+    </a>
+    <a class="btn-secondary link-btn btn-large" href="/admin/settings.html">
+      <span class="btn-icon">⚙️</span>
+      <span class="btn-text">Cài đặt</span>
+    </a>
+    <a class="btn-secondary link-btn btn-large" href="/admin/inventory-check.html">
+      <span class="btn-icon">🔍</span>
+      <span class="btn-text">Kiểm tra tồn kho</span>
+    </a>
+  </div>
+
+  <section class="card">
+    <div class="card-header">
+      <h2>Danh sách đơn hàng</h2>
+      <button id="btn-new" class="btn-secondary">+ Tạo đơn hàng</button>
+    </div>
+
+    <div class="table-wrap">
+      <table id="orders-table">
+        <thead>
+          <tr>
+            <th>Customer</th>
+            <th class="text-center">Tổng tiền</th>
+            <th class="text-center">Status</th>
+            <th>Created at</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="5" class="muted">Đăng nhập để tải dữ liệu...</td></tr>
+        </tbody>
+      </table>
+      <div id="orders-pagination"></div>
+    </div>
+  </section>
+</main>
+
+<div id="order-modal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="modal-title">Tạo đơn hàng</h3>
+      <button id="btn-close" class="btn-close">×</button>
+    </div>
+
+    <div class="form-section">
+      <h4>Thông tin khách hàng</h4>
+      <div class="grid">
+        <div>
+          <label>Customer ID *</label>
+          <input id="field-customer" type="text" placeholder="customer_id hoặc tên/sdt">
+        </div>
+        <div>
+          <label>Ngày giờ đặt hàng</label>
+          <input id="field-order-date" type="datetime-local">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h4>Sản phẩm</h4>
+      <div id="items-container"></div>
+      <button id="btn-add-item" type="button" class="btn-small">+ Thêm sản phẩm</button>
+    </div>
+
+    <div class="form-section">
+      <div class="total-display">
+        <strong>Tổng tiền:</strong>
+        <span id="order-total">0 ₫</span>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button id="btn-save" class="btn-primary">Tạo đơn</button>
+    </div>
+  </div>
+</div>
+
+<div id="detail-modal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Chi tiết đơn hàng</h3>
+      <button id="btn-close-detail" class="btn-close">×</button>
+    </div>
+    <div id="order-detail-content"></div>
+  </div>
+</div>
+
+<script src="loading.js"></script>
+<script src="auth.js"></script>
+<script src="cache.js"></script>
+<script src="common.js"></script>
+<script src="worker-api.js"></script>
+<script src="pagination.js"></script>
+<script src="orders.js"></script>
+</body>
+</html>
