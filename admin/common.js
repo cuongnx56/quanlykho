@@ -138,8 +138,19 @@ function resetSession() {
  * API call helper
  */
 async function apiCall(action, data = {}) {
+  // ✅ Reload session from localStorage before each API call to ensure token is fresh
+  // BUT: Skip reload for auth.login (apiKey is not yet saved to localStorage)
+  if (action !== "auth.login") {
+    reloadSession();
+  }
+  
   if (!session.apiUrl) {
     session.apiUrl = DEFAULT_API_URL;
+  }
+  
+  // ✅ Ensure apiKey is available (skip check for auth.login as it's provided in form)
+  if (action !== "auth.login" && !session.apiKey) {
+    throw new Error("API key is required. Please login again.");
   }
   
   const res = await fetch(session.apiUrl, {
@@ -155,7 +166,15 @@ async function apiCall(action, data = {}) {
   });
   
   const json = await res.json();
-  if (!json.success) throw new Error(json.error);
+  if (!json.success) {
+    // ✅ Handle token expiration errors
+    if (json.error && (json.error.includes("Token expired") || json.error.includes("Unauthorized"))) {
+      // Clear session and prompt user to login again
+      resetSession();
+      throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+    }
+    throw new Error(json.error);
+  }
   return json.data;
 }
 

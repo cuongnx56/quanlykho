@@ -79,6 +79,7 @@
         <thead>
           <tr>
             <th>Customer</th>
+            <th>Sản phẩm</th>
             <th class="text-center">Tổng tiền</th>
             <th class="text-center">Status</th>
             <th>Created at</th>
@@ -86,7 +87,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr><td colspan="5" class="muted">Đăng nhập để tải dữ liệu...</td></tr>
+          <tr><td colspan="6" class="muted">Đăng nhập để tải dữ liệu...</td></tr>
         </tbody>
       </table>
       <div id="orders-pagination"></div>
@@ -105,8 +106,12 @@
       <h4>Thông tin khách hàng</h4>
       <div class="grid">
         <div>
-          <label>Customer ID *</label>
-          <input id="field-customer" type="text" placeholder="customer_id hoặc tên/sdt">
+          <label>Khách hàng *</label>
+          <div style="position: relative;">
+            <input id="field-customer" type="text" placeholder="Gõ tên/sđt để tìm hoặc tạo mới" autocomplete="off">
+            <div id="customer-autocomplete" class="autocomplete-dropdown" style="display: none;"></div>
+          </div>
+          <small style="color: #666; font-size: 12px;">Gõ tên hoặc số điện thoại. Nếu không tìm thấy sẽ tự động tạo mới.</small>
         </div>
         <div>
           <label>Ngày giờ đặt hàng</label>

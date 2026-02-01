@@ -165,6 +165,10 @@ const WorkerAPI = {
    */
   async reports(params = {}) {
     return this.call('/reports', params);
+  },
+
+  async settingsList(params = {}) {
+    return this.call('/settings', params);
   }
 };
 

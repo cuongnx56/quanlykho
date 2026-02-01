@@ -125,7 +125,7 @@ async function onboard() {
           ${sheetButton}
         </div>
       </div>
-    `;
+`;
 
   } catch (err) {
     Loading.hide();

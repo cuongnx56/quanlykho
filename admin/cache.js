@@ -11,12 +11,12 @@
 const CacheManager = {
   // Cache TTL (Time To Live) - milliseconds
   TTL: {
-    PRODUCTS: 15 * 60 * 1000,      // 15 phút
-    ORDERS: 15 * 60 * 1000,         // 15 phút
-    INVENTORY: 15 * 60 * 1000,      // 15 phút
-    CUSTOMERS: 15 * 60 * 1000,      // 15 phút
-    REPORTS: 15 * 60 * 1000,        // 15 phút
-    DASHBOARD: 15 * 60 * 1000       // 15 phút
+    PRODUCTS: 5 * 60 * 1000,      // 15 phút
+    ORDERS: 5 * 60 * 1000,         // 15 phút
+    INVENTORY: 5 * 60 * 1000,      // 15 phút
+    CUSTOMERS: 5 * 60 * 1000,      // 15 phút
+    REPORTS: 5 * 60 * 1000,        // 15 phút
+    DASHBOARD: 5 * 60 * 1000       // 15 phút
   },
 
   /**
@@ -125,6 +125,7 @@ const CacheManager = {
           key.startsWith('customers_') ||
           key.startsWith('reports_') ||
           key.startsWith('dashboard_') ||
+          key.startsWith('invoices_') ||
           key.endsWith('_ts')) {
         keysToRemove.push(key);
       }
@@ -134,6 +135,39 @@ const CacheManager = {
       localStorage.removeItem(key);
     });
     
+    return keysToRemove.length;
+  },
+
+  /**
+   * Clear all cache (common function for force clear)
+   * This function clears ALL cache keys including timestamps
+   * Use this when you need to ensure all cache is cleared
+   */
+  clearAllCache() {
+    const keysToRemove = [];
+    
+    // Get all localStorage keys
+    Object.keys(localStorage).forEach(key => {
+      // Only clear cache keys, not auth session or other app data
+      if (key.startsWith('products_') || 
+          key.startsWith('orders_') || 
+          key.startsWith('inventory_') || 
+          key.startsWith('customers_') ||
+          key.startsWith('reports_') ||
+          key.startsWith('dashboard_') ||
+          key.startsWith('invoices_') ||
+          key.startsWith('invoice_') ||
+          key.endsWith('_ts')) {
+        keysToRemove.push(key);
+      }
+    });
+    
+    // Remove all cache keys
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key);
+    });
+    
+    console.log(`✅ All cache cleared: ${keysToRemove.length} keys removed`);
     return keysToRemove.length;
   },
 
@@ -192,11 +226,14 @@ const CacheManager = {
    */
   invalidateOnInventoryChange() {
     this.clear('^inventory_');
+    // ✅ Inventory IN/OUT thay đổi amount_in_stock của products → Cần invalidate products cache
+    this.clear('^products_');
     // Inventory ảnh hưởng reports
     this.clear('^reports_stock_value');
     this.clear('^reports_inventory_movement');
     this.clear('^reports_dashboard');
-    console.log("✅ Cache invalidated: Inventory changed");
+    this.clear('^reports_low_stock');
+    console.log("✅ Cache invalidated: Inventory changed (products, inventory, reports)");
   },
 
   /**
