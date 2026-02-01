@@ -484,6 +484,14 @@ byId("sales-period").addEventListener("change", () => {
   }
 });
 
+// Initialize WorkerAPI if configured
+if (window.WorkerAPI && window.CommonUtils && window.CommonUtils.WORKER_URL) {
+  WorkerAPI.init(window.CommonUtils.WORKER_URL);
+  console.log("✅ WorkerAPI initialized for READ operations");
+} else if (window.WorkerAPI) {
+  console.log("ℹ️ WorkerAPI available but WORKER_URL not configured. Using GAS only.");
+}
+
 syncInputsFromSession();
 applyQueryParams_();
 updateSessionUI();

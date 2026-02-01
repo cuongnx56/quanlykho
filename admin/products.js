@@ -328,6 +328,9 @@ function renderPagination() {
 }
 
 async function saveProduct() {
+  // ✅ Reload session from localStorage to ensure token is up to date
+  reloadSession();
+  
   const data = readForm();
   if (!data.id || !data.title || data.price === "") {
     alert("ID, Title và Price là bắt buộc");
@@ -358,7 +361,10 @@ async function saveProduct() {
       savedProduct = await apiCall("products.update", data);
     }
 
-    // ✅ Invalidate cache after create/update
+    // ✅ Clear ALL cache after write action (create/update)
+    CacheManager.clearAllCache();
+    
+    // ✅ Also invalidate specific caches to be thorough
     CacheManager.invalidateOnProductChange();
     
     closeModal();
@@ -380,10 +386,11 @@ async function saveProduct() {
       updateProductInList(savedProduct);
     }
   } catch (err) {
-    // If unauthorized, suggest re-login
-    if (err.message && (err.message.includes("Unauthorized") || err.message.includes("Forbidden"))) {
-      alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.\n\n" + err.message);
+    // ✅ Handle token expiration - prompt user to login again
+    if (err.message && (err.message.includes("Token expired") || err.message.includes("Unauthorized") || err.message.includes("hết hạn"))) {
+      alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
       resetSession();
+      window.location.reload();
     } else {
       alert("Lỗi: " + err.message);
     }
@@ -392,6 +399,9 @@ async function saveProduct() {
 }
 
 async function deleteProduct(productId) {
+  // ✅ Reload session from localStorage to ensure token is up to date
+  reloadSession();
+  
   if (!productId) return;
   
   const product = products.find(p => p.id === productId);
@@ -420,7 +430,10 @@ async function deleteProduct(productId) {
       id: productId
     });
     
-    // ✅ Invalidate cache after delete
+    // ✅ Clear ALL cache after write action (delete)
+    CacheManager.clearAllCache();
+    
+    // ✅ Also invalidate specific caches to be thorough
     CacheManager.invalidateOnProductChange();
     
     // ✅ Remove product from UI

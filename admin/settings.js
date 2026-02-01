@@ -39,6 +39,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     loadSettings(); // Reload to reset form
   });
   
+  // Initialize WorkerAPI if configured
+  if (window.WorkerAPI && window.CommonUtils && window.CommonUtils.WORKER_URL) {
+    WorkerAPI.init(window.CommonUtils.WORKER_URL);
+    console.log("✅ WorkerAPI initialized for READ operations");
+  } else if (window.WorkerAPI) {
+    console.log("ℹ️ WorkerAPI available but WORKER_URL not configured. Using GAS only.");
+  }
+  
   // Load settings if already logged in
   if (session.token && session.apiKey) {
     await loadSettings();
@@ -57,17 +65,49 @@ async function loadSettings() {
   
   Loading.show("Đang tải cài đặt...");
   try {
-    const cacheKey = "settings_list";
+    // ✅ Step 1: Check frontend cache first (localStorage)
+    const cacheKey = CacheManager.key("settings", "list");
     let settings = CacheManager.get(cacheKey);
     
+    if (settings) {
+      console.log("📦 Using cached settings data (localStorage)");
+      currentSettings = settings;
+      populateForm(settings);
+      Loading.hide();
+      return;
+    }
+    
+    // ✅ Step 2: Try Cloudflare Worker first (fast, edge network)
+    if (WorkerAPI && WorkerAPI.isConfigured()) {
+      try {
+        console.log("🚀 Trying Cloudflare Worker for settings.list...");
+        const result = await WorkerAPI.settingsList();
+        
+        if (result && result.data) {
+          console.log("✅ Worker cache HIT! Loaded from Cloudflare KV");
+          settings = result.data;
+        } else {
+          console.log("⚠️ Worker cache MISS, falling back to GAS");
+        }
+      } catch (error) {
+        console.error("⚠️ Worker error:", error);
+        console.log("Falling back to GAS...");
+      }
+    }
+    
+    // ✅ Step 3: Fallback to GAS if Worker fails or cache miss
     if (!settings) {
+      console.log("📡 Fetching from GAS /exec endpoint...");
       settings = await apiCall("settings.list", {
         token: session.token
       });
-      CacheManager.set(cacheKey, settings, 300); // 5 minutes
     }
     
     currentSettings = settings;
+    
+    // Save to frontend cache
+    CacheManager.set(cacheKey, settings);
+    
     populateForm(settings);
   } catch (err) {
     alert(`❌ Lỗi: ${err.message}`);
@@ -111,12 +151,18 @@ async function saveSettings() {
       return;
     }
     
+    // ✅ Reload session from localStorage to ensure token is up to date
+    reloadSession();
+    
     const updatedSettings = await apiCall("settings.update", {
       token: session.token,
       settings: formData
     });
     
-    // Invalidate cache
+    // ✅ Clear ALL cache after write action (update settings)
+    CacheManager.clearAllCache();
+    
+    // ✅ Also invalidate all caches to be thorough
     CacheManager.invalidateAll();
     
     // Update current settings
@@ -131,7 +177,14 @@ async function saveSettings() {
     }, 1000);
     
   } catch (err) {
-    alert(`❌ Lỗi: ${err.message}`);
+    // ✅ Handle token expiration - prompt user to login again
+    if (err.message && (err.message.includes("Token expired") || err.message.includes("Unauthorized") || err.message.includes("hết hạn"))) {
+      alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+      resetSession();
+      window.location.reload();
+    } else {
+      alert(`❌ Lỗi: ${err.message}`);
+    }
   } finally {
     Loading.button(btn, false);
   }

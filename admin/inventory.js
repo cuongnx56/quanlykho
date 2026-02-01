@@ -77,25 +77,50 @@ async function loadData(page) {
     
     // Check cache for movements
     const movementsCacheKey = CacheManager.key("inventory", "movements", page, itemsPerPage);
-    const cachedMovements = CacheManager.get(movementsCacheKey);
+    let movementsResult = CacheManager.get(movementsCacheKey);
     
-    if (cachedMovements) {
-      console.log("📦 Using cached inventory movements");
-      movements = cachedMovements.items || [];
-      totalMovements = cachedMovements.total || 0;
-      totalPages = cachedMovements.totalPages || 0;
-      currentPage = cachedMovements.page || 1;
+    if (movementsResult) {
+      console.log("📦 Using cached inventory movements (localStorage)");
+      movements = movementsResult.items || [];
+      totalMovements = movementsResult.total || 0;
+      totalPages = movementsResult.totalPages || 0;
+      currentPage = movementsResult.page || 1;
     } else {
-      const movementsResult = await apiCall("inventory.list", {
-        page: page,
-        limit: itemsPerPage
-      });
+      // ✅ Step 1: Try Cloudflare Worker first (fast, edge network)
+      if (WorkerAPI && WorkerAPI.isConfigured()) {
+        try {
+          console.log("🚀 Trying Cloudflare Worker for inventory.list...");
+          movementsResult = await WorkerAPI.inventoryList({
+            page: page,
+            limit: itemsPerPage
+          });
+          
+          if (movementsResult) {
+            console.log("✅ Worker cache HIT! Loaded from Cloudflare KV");
+          } else {
+            console.log("⚠️ Worker cache MISS, falling back to GAS");
+          }
+        } catch (error) {
+          console.error("⚠️ Worker error:", error);
+          console.log("Falling back to GAS...");
+        }
+      }
+      
+      // ✅ Step 2: Fallback to GAS if Worker fails or cache miss
+      if (!movementsResult) {
+        console.log("📡 Fetching from GAS /exec endpoint...");
+        movementsResult = await apiCall("inventory.list", {
+          page: page,
+          limit: itemsPerPage
+        });
+      }
       
       movements = movementsResult.items || [];
       totalMovements = movementsResult.total || 0;
       totalPages = movementsResult.totalPages || 0;
       currentPage = movementsResult.page || 1;
       
+      // Save to frontend cache
       CacheManager.set(movementsCacheKey, movementsResult);
     }
     
@@ -231,10 +256,14 @@ function renderProductOptions() {
 }
 
 async function createMovement() {
+  // ✅ Reload session from localStorage to ensure token is up to date
+  reloadSession();
+  
   if (!session.token) {
     alert("Vui lòng đăng nhập trước");
     return;
   }
+  
   const productId = byId("product_id").value;
   const type = byId("movement_type").value;
   const qty = byId("qty").value;
@@ -246,33 +275,47 @@ async function createMovement() {
     return;
   }
 
-  const newMovement = await apiCall("inventory.create", {
-    token: session.token,
-    product_id: productId,
-    type,
-    qty,
-    unit_price: unitPrice || 0,
-    note
-  });
+  try {
+    const newMovement = await apiCall("inventory.create", {
+      token: session.token,
+      product_id: productId,
+      type,
+      qty,
+      unit_price: unitPrice || 0,
+      note
+    });
 
-  // ✅ Invalidate cache after create
-  CacheManager.invalidateOnInventoryChange();
+    // ✅ Clear ALL cache after write action (create movement)
+    CacheManager.clearAllCache();
+    
+    // ✅ Also invalidate specific caches to be thorough
+    CacheManager.invalidateOnInventoryChange();
 
-  byId("qty").value = "";
-  byId("unit_price").value = "";
-  byId("note").value = "";
-  
-  // ✅ Add new movement to list instead of reloading
-  if (currentPage === 1 && movements.length < itemsPerPage) {
-    addMovementToList(newMovement);
-    totalMovements++;
-    totalPages = Math.ceil(totalMovements / itemsPerPage);
-    renderPagination();
-    // Reload summary to update stock (summary needs to be reloaded)
-    await loadData(currentPage);
-  } else {
-    const urlParams = Pagination.getParamsFromURL();
-    await loadData(urlParams.page);
+    byId("qty").value = "";
+    byId("unit_price").value = "";
+    byId("note").value = "";
+    
+    // ✅ Add new movement to list instead of reloading
+    if (currentPage === 1 && movements.length < itemsPerPage) {
+      addMovementToList(newMovement);
+      totalMovements++;
+      totalPages = Math.ceil(totalMovements / itemsPerPage);
+      renderPagination();
+      // Reload summary to update stock (summary needs to be reloaded)
+      await loadData(currentPage);
+    } else {
+      const urlParams = Pagination.getParamsFromURL();
+      await loadData(urlParams.page);
+    }
+  } catch (err) {
+    // ✅ Handle token expiration - prompt user to login again
+    if (err.message && (err.message.includes("Token expired") || err.message.includes("Unauthorized") || err.message.includes("hết hạn"))) {
+      alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+      resetSession();
+      window.location.reload();
+    } else {
+      alert(`❌ Lỗi: ${err.message}`);
+    }
   }
 }
 
@@ -303,6 +346,14 @@ byId("btn-create").addEventListener("click", async () => {
     Loading.button(btn, false);
   }
 });
+
+// Initialize WorkerAPI if configured
+if (window.WorkerAPI && window.CommonUtils && window.CommonUtils.WORKER_URL) {
+  WorkerAPI.init(window.CommonUtils.WORKER_URL);
+  console.log("✅ WorkerAPI initialized for READ operations");
+} else if (window.WorkerAPI) {
+  console.log("ℹ️ WorkerAPI available but WORKER_URL not configured. Using GAS only.");
+}
 
 syncInputsFromSession();
 applyQueryParams_();

@@ -29,6 +29,155 @@ window.resetSession = resetSession;
 
 function openModal() {
   byId("order-modal").classList.add("active");
+  // ✅ Load customers for autocomplete when opening modal
+  loadCustomersForAutocomplete();
+}
+
+// ✅ Load customers for autocomplete
+async function loadCustomersForAutocomplete() {
+  if (!customers || customers.length === 0) {
+    // Load customers if not already loaded
+    try {
+      const customersCacheKey = CacheManager.key("customers", "list", 1, 1000);
+      const cachedCustomers = CacheManager.get(customersCacheKey);
+      
+      if (cachedCustomers) {
+        customers = (cachedCustomers.items) ? cachedCustomers.items : (Array.isArray(cachedCustomers) ? cachedCustomers : []);
+      } else {
+        // Try Worker API first
+        let customersData = null;
+        if (WorkerAPI && WorkerAPI.isConfigured()) {
+          try {
+            customersData = await WorkerAPI.customersList({ page: 1, limit: 1000 });
+            if (customersData) {
+              customers = (customersData.items) ? customersData.items : (Array.isArray(customersData) ? customersData : []);
+              CacheManager.set(customersCacheKey, customersData);
+            }
+          } catch (error) {
+            console.error("⚠️ Worker customers error:", error);
+          }
+        }
+        
+        // Fallback to GAS
+        if (!customersData) {
+          const customersResult = await apiCall("customers.list", { page: 1, limit: 1000 });
+          customers = (customersResult && customersResult.items) ? customersResult.items : (Array.isArray(customersResult) ? customersResult : []);
+          CacheManager.set(customersCacheKey, customersResult);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading customers:", err);
+    }
+  }
+  
+  // Setup autocomplete
+  setupCustomerAutocomplete();
+}
+
+// ✅ Setup customer autocomplete/search
+function setupCustomerAutocomplete() {
+  const customerInput = byId("field-customer");
+  const autocompleteDiv = byId("customer-autocomplete");
+  let selectedCustomerId = null;
+  let filteredCustomers = [];
+  
+  if (!customerInput || !autocompleteDiv) return;
+  
+  // Clear previous listeners if any
+  if (customerInput._inputHandler) {
+    customerInput.removeEventListener("input", customerInput._inputHandler);
+  }
+  if (customerInput._blurHandler) {
+    customerInput.removeEventListener("blur", customerInput._blurHandler);
+  }
+  if (customerInput._keydownHandler) {
+    customerInput.removeEventListener("keydown", customerInput._keydownHandler);
+  }
+  
+  function handleCustomerInput(e) {
+    const query = e.target.value.trim().toLowerCase();
+    selectedCustomerId = null;
+    
+    if (query.length === 0) {
+      autocompleteDiv.style.display = "none";
+      return;
+    }
+    
+    // Filter customers by name or phone
+    filteredCustomers = customers.filter(c => {
+      const name = (c.name || "").toLowerCase();
+      const phone = (c.phone || "").toLowerCase();
+      const id = (c.id || "").toLowerCase();
+      return name.includes(query) || phone.includes(query) || id.includes(query);
+    });
+    
+    // Show autocomplete dropdown
+    if (filteredCustomers.length > 0) {
+      autocompleteDiv.innerHTML = filteredCustomers.map((c, index) => `
+        <div class="autocomplete-item" data-index="${index}" data-customer-id="${c.id}">
+          <div class="autocomplete-item-name">${c.name || c.id}</div>
+          <div class="autocomplete-item-details">${c.phone || ""} ${c.email ? `• ${c.email}` : ""}</div>
+        </div>
+      `).join("");
+      
+      // Add click handlers
+      autocompleteDiv.querySelectorAll(".autocomplete-item").forEach(item => {
+        item.addEventListener("click", () => {
+          const index = parseInt(item.dataset.index);
+          const customer = filteredCustomers[index];
+          customerInput.value = customer.name || customer.id;
+          selectedCustomerId = customer.id;
+          autocompleteDiv.style.display = "none";
+        });
+      });
+      
+      autocompleteDiv.style.display = "block";
+    } else {
+      // No matches - show option to create new
+      autocompleteDiv.innerHTML = `
+        <div class="autocomplete-item" style="color: #3b82f6; font-style: italic;">
+          <div class="autocomplete-item-name">Tạo khách hàng mới: "${query}"</div>
+          <div class="autocomplete-item-details">Nhấn Enter để tạo mới</div>
+        </div>
+      `;
+      autocompleteDiv.style.display = "block";
+    }
+  }
+  
+  function handleCustomerBlur(e) {
+    // Delay to allow click on autocomplete item
+    setTimeout(() => {
+      autocompleteDiv.style.display = "none";
+    }, 200);
+  }
+  
+  function handleCustomerKeydown(e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (filteredCustomers.length > 0) {
+        // Select first match
+        const firstItem = autocompleteDiv.querySelector(".autocomplete-item");
+        if (firstItem) firstItem.click();
+      } else {
+        // Will create new customer in saveOrder()
+        autocompleteDiv.style.display = "none";
+      }
+    } else if (e.key === "Escape") {
+      autocompleteDiv.style.display = "none";
+    }
+  }
+  
+  // Add event listeners
+  customerInput.addEventListener("input", handleCustomerInput);
+  customerInput.addEventListener("blur", handleCustomerBlur);
+  customerInput.addEventListener("keydown", handleCustomerKeydown);
+  
+  // Store handlers and selected customer ID getter/setter
+  customerInput._inputHandler = handleCustomerInput;
+  customerInput._blurHandler = handleCustomerBlur;
+  customerInput._keydownHandler = handleCustomerKeydown;
+  customerInput._selectedCustomerId = () => selectedCustomerId;
+  customerInput._setSelectedCustomerId = (id) => { selectedCustomerId = id; };
 }
 
 function closeModal() {
@@ -77,7 +226,7 @@ async function login() {
   await loadData(urlParams.page);
 }
 
-async function loadData(page) {
+async function loadData(page, forceFromGAS = false) {
   // Only read from URL when caller doesn't explicitly pass a page
   if (page == null) {
     const urlParams = Pagination.getParamsFromURL();
@@ -87,9 +236,9 @@ async function loadData(page) {
   currentPage = page;
   
   return apiCallWithLoading(async () => {
-    // ✅ Step 1: Check frontend cache first (localStorage)
+    // ✅ Step 1: Check frontend cache first (localStorage) - skip if forceFromGAS
     const ordersCacheKey = CacheManager.key("orders", "list", page, itemsPerPage);
-    const cachedOrders = CacheManager.get(ordersCacheKey);
+    const cachedOrders = forceFromGAS ? null : CacheManager.get(ordersCacheKey);
     
     if (cachedOrders) {
       console.log("📦 Using cached orders data (localStorage)");
@@ -98,10 +247,10 @@ async function loadData(page) {
       totalPages = cachedOrders.totalPages || 0;
       currentPage = cachedOrders.page || 1;
     } else {
-      // ✅ Step 2: Try Cloudflare Worker first (fast, edge network)
+      // ✅ Step 2: Try Cloudflare Worker first (fast, edge network) - skip if forceFromGAS
       let ordersResult = null;
       
-      if (WorkerAPI && WorkerAPI.isConfigured()) {
+      if (!forceFromGAS && WorkerAPI && WorkerAPI.isConfigured()) {
         try {
           console.log("🚀 Trying Cloudflare Worker for orders.list...");
           ordersResult = await WorkerAPI.ordersList({
@@ -118,9 +267,11 @@ async function loadData(page) {
           console.error("⚠️ Worker error:", error);
           console.log("Falling back to GAS...");
         }
+      } else if (forceFromGAS) {
+        console.log("🔄 Force reload from GAS (bypassing Worker cache)...");
       }
       
-      // ✅ Step 3: Fallback to GAS if Worker fails or cache miss
+      // ✅ Step 3: Fallback to GAS if Worker fails or cache miss or forceFromGAS
       if (!ordersResult) {
         console.log("📡 Fetching from GAS /exec endpoint...");
         ordersResult = await apiCall("orders.list", {
@@ -138,31 +289,83 @@ async function loadData(page) {
       CacheManager.set(ordersCacheKey, ordersResult);
     }
     
-    // Load products (check cache)
-    const productsCacheKey = CacheManager.key("products", "list", 1, 1000);
-    const cachedProducts = CacheManager.get(productsCacheKey);
+    // ✅ Load products and customers in parallel (not sequential) for better performance
+    // ✅ Try Worker API first, then fallback to GAS
+    const [productsResult, customersResult] = await Promise.all([
+      // Load products
+      (async () => {
+        const productsCacheKey = CacheManager.key("products", "list", 1, 1000);
+        const cachedProducts = CacheManager.get(productsCacheKey);
+        
+        if (cachedProducts) {
+          console.log("📦 Using cached products data");
+          return (cachedProducts.items) ? cachedProducts.items : (Array.isArray(cachedProducts) ? cachedProducts : []);
+        }
+        
+        // ✅ Try Worker API first
+        let productsData = null;
+        if (WorkerAPI && WorkerAPI.isConfigured()) {
+          try {
+            productsData = await WorkerAPI.productsList({ page: 1, limit: 1000 });
+            if (productsData) {
+              console.log("✅ Products loaded from Worker cache");
+              const productsList = (productsData.items) ? productsData.items : (Array.isArray(productsData) ? productsData : []);
+              CacheManager.set(productsCacheKey, productsData);
+              return productsList;
+            }
+          } catch (error) {
+            console.error("⚠️ Worker products error:", error);
+          }
+        }
+        
+        // Fallback to GAS
+        console.log("📡 Loading products from GAS...");
+        const productsResult = await apiCall("products.list", { page: 1, limit: 1000 });
+        const productsList = (productsResult && productsResult.items) ? productsResult.items : (Array.isArray(productsResult) ? productsResult : []);
+        CacheManager.set(productsCacheKey, productsResult);
+        return productsList;
+      })(),
+      
+      // Load customers
+      (async () => {
+        const customersCacheKey = CacheManager.key("customers", "list", 1, 1000);
+        const cachedCustomers = CacheManager.get(customersCacheKey);
+        
+        if (cachedCustomers) {
+          console.log("📦 Using cached customers data");
+          return (cachedCustomers.items) ? cachedCustomers.items : (Array.isArray(cachedCustomers) ? cachedCustomers : []);
+        }
+        
+        // ✅ Try Worker API first (if available)
+        let customersData = null;
+        if (WorkerAPI && WorkerAPI.isConfigured()) {
+          try {
+            customersData = await WorkerAPI.customersList({ page: 1, limit: 1000 });
+            if (customersData) {
+              console.log("✅ Customers loaded from Worker cache");
+              const customersList = (customersData.items) ? customersData.items : (Array.isArray(customersData) ? customersData : []);
+              CacheManager.set(customersCacheKey, customersData);
+              return customersList;
+            }
+          } catch (error) {
+            console.error("⚠️ Worker customers error:", error);
+          }
+        }
+        
+        // Fallback to GAS
+        console.log("📡 Loading customers from GAS...");
+        const customersResult = await apiCall("customers.list", { page: 1, limit: 1000 });
+        const customersList = (customersResult && customersResult.items) ? customersResult.items : (Array.isArray(customersResult) ? customersResult : []);
+        CacheManager.set(customersCacheKey, customersResult);
+        return customersList;
+      })()
+    ]);
     
-    if (cachedProducts) {
-      console.log("📦 Using cached products data");
-      products = (cachedProducts.items) ? cachedProducts.items : (Array.isArray(cachedProducts) ? cachedProducts : []);
-    } else {
-      const productsResult = await apiCall("products.list", { page: 1, limit: 1000 });
-      products = (productsResult && productsResult.items) ? productsResult.items : (Array.isArray(productsResult) ? productsResult : []);
-      CacheManager.set(productsCacheKey, productsResult);
-    }
+    products = productsResult;
+    customers = customersResult;
     
-    // Load customers (check cache)
-    const customersCacheKey = CacheManager.key("customers", "list", 1, 1000);
-    const cachedCustomers = CacheManager.get(customersCacheKey);
-    
-    if (cachedCustomers) {
-      console.log("📦 Using cached customers data");
-      customers = (cachedCustomers.items) ? cachedCustomers.items : (Array.isArray(cachedCustomers) ? cachedCustomers : []);
-    } else {
-      const customersResult = await apiCall("customers.list", { page: 1, limit: 1000 });
-      customers = (customersResult && customersResult.items) ? customersResult.items : (Array.isArray(customersResult) ? customersResult : []);
-      CacheManager.set(customersCacheKey, customersResult);
-    }
+    // ✅ Clear productsMap to force rebuild on next render
+    window.productsMap = null;
     
     renderOrders();
     renderPagination();
@@ -183,21 +386,77 @@ function renderPagination() {
   );
 }
 
+// ✅ Helper function to get customer display name
+// Priority: name → phone → email → id
+function getCustomerDisplayName(customerId) {
+  if (!customerId) return "";
+  
+  // Find customer in customers array
+  const customer = customers.find(c => c.id === customerId);
+  
+  if (!customer) {
+    return customerId; // Fallback to ID if customer not found
+  }
+  
+  // Priority: name → phone → email → id
+  return customer.name || customer.phone || customer.email || customer.id || customerId;
+}
+
 function renderOrders() {
   const tbody = byId("orders-table").querySelector("tbody");
   if (!orders.length) {
-    tbody.innerHTML = `<tr><td colspan="5" class="muted">Chưa có đơn hàng</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="muted">Chưa có đơn hàng</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = orders.map(order => {
+  // ✅ Sort orders by created_at desc (newest first) - ensure consistent sorting
+  const sortedOrders = [...orders].sort((a, b) => {
+    const dateA = a.created_at || "";
+    const dateB = b.created_at || "";
+    return dateB.localeCompare(dateA);
+  });
+
+  // ✅ Create products Map once for O(1) lookup (instead of find() which is O(n))
+  // This significantly improves performance when rendering many orders
+  if (!window.productsMap || window.productsMap.size === 0) {
+    window.productsMap = new Map();
+    if (products && Array.isArray(products)) {
+      products.forEach(p => {
+        if (p.id) {
+          window.productsMap.set(p.id, p.title || p.name || p.id);
+        }
+      });
+    }
+  }
+
+  tbody.innerHTML = sortedOrders.map(order => {
     const status = order.status || "NEW";
     const statusClass = getStatusClass(status);
     const actions = getStatusActions(order.id, status);
     
+    // ✅ Get product names from items_json (optimized with Map for O(1) lookup)
+    let productNames = "";
+    try {
+      const items = JSON.parse(order.items_json || "[]");
+      if (Array.isArray(items) && items.length > 0) {
+        // Get product names using Map lookup (O(1) instead of O(n))
+        const productNameList = items.map(item => {
+          const productId = item.product_id || "";
+          return window.productsMap.get(productId) || productId;
+        });
+        productNames = productNameList.join(", ");
+      }
+    } catch (e) {
+      productNames = "";
+    }
+    
+    // ✅ Get customer display name (name → phone → email → id)
+    const customerDisplayName = getCustomerDisplayName(order.customer_id);
+    
     return `
       <tr data-order-id="${order.id}">
-        <td>${order.customer_id || ""}</td>
+        <td>${customerDisplayName}</td>
+        <td>${productNames || "-"}</td>
         <td class="text-center">${formatPrice(order.total || 0)}</td>
         <td class="text-center"><span class="status-badge ${statusClass}">${status}</span></td>
         <td>${order.created_at || ""}</td>
@@ -225,8 +484,40 @@ function updateOrderInList(order) {
     const statusClass = getStatusClass(status);
     const actions = getStatusActions(order.id, status);
     
+    // ✅ Get product names from items_json (optimized with Map for O(1) lookup)
+    let productNames = "";
+    try {
+      const items = JSON.parse(order.items_json || "[]");
+      if (Array.isArray(items) && items.length > 0) {
+        // Ensure productsMap exists
+        if (!window.productsMap || window.productsMap.size === 0) {
+          window.productsMap = new Map();
+          if (products && Array.isArray(products)) {
+            products.forEach(p => {
+              if (p.id) {
+                window.productsMap.set(p.id, p.title || p.name || p.id);
+              }
+            });
+          }
+        }
+        
+        // Get product names using Map lookup (O(1) instead of O(n))
+        const productNameList = items.map(item => {
+          const productId = item.product_id || "";
+          return window.productsMap.get(productId) || productId;
+        });
+        productNames = productNameList.join(", ");
+      }
+    } catch (e) {
+      productNames = "";
+    }
+    
+    // ✅ Get customer display name (name → phone → email → id)
+    const customerDisplayName = getCustomerDisplayName(order.customer_id);
+    
     row.innerHTML = `
-      <td>${order.customer_id || ""}</td>
+      <td>${customerDisplayName}</td>
+      <td>${productNames || "-"}</td>
       <td class="text-center">${formatPrice(order.total || 0)}</td>
       <td class="text-center"><span class="status-badge ${statusClass}">${status}</span></td>
       <td>${order.created_at || ""}</td>
@@ -263,6 +554,9 @@ function getStatusActions(orderId, status) {
 }
 
 async function changeStatus(orderId, newStatus) {
+  // ✅ Reload session from localStorage to ensure token is up to date
+  reloadSession();
+  
   const confirmMsg = {
     "DONE": "Xác nhận hoàn thành đơn hàng? Hệ thống sẽ trừ kho.",
     "CANCEL": "Xác nhận hủy đơn hàng?",
@@ -279,15 +573,41 @@ async function changeStatus(orderId, newStatus) {
       new_status: newStatus
     });
     
-    // ✅ Invalidate cache after status change
+    // ✅ Clear ALL cache after write action (update status)
+    // This ensures no stale cache remains, especially for products (amount_in_stock)
+    const oldStatus = updatedOrder.old_status || "unknown";
+    console.log(`🔄 Clearing all cache (status change: ${oldStatus} → ${newStatus})`);
+    
+    // ✅ Use common function to clear all cache
+    CacheManager.clearAllCache();
+    
+    // ✅ Also invalidate specific caches to be thorough
     CacheManager.invalidateOnOrderChange();
+    
+    // ✅ If status is DONE or RETURN, inventory changed → ensure products cache is cleared
+    if (newStatus === "DONE" || newStatus === "RETURN") {
+      console.log(`🔄 Inventory changed (${oldStatus} → ${newStatus}), ensuring products cache is cleared`);
+      CacheManager.invalidateOnInventoryChange();
+    }
+    
+    // ✅ Force reload from GAS to ensure fresh data
+    // Clear frontend cache to force reload
+    const ordersCacheKey = CacheManager.key("orders", "list", currentPage, itemsPerPage);
+    CacheManager.remove(ordersCacheKey);
     
     // ✅ Update order in list directly instead of reloading
     updateOrderInList(updatedOrder);
     
     alert(`✅ Đã chuyển trạng thái sang ${newStatus}`);
   } catch (err) {
-    alert(`❌ Lỗi: ${err.message}`);
+    // ✅ Handle token expiration - prompt user to login again
+    if (err.message && (err.message.includes("Token expired") || err.message.includes("Unauthorized") || err.message.includes("hết hạn"))) {
+      alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+      resetSession();
+      window.location.reload();
+    } else {
+      alert(`❌ Lỗi: ${err.message}`);
+    }
   } finally {
     Loading.hide();
   }
@@ -312,12 +632,15 @@ function viewOrder(orderId) {
     invoiceBtn = `<button class="btn-secondary" onclick="createInvoiceFromOrder('${order.id}')" style="margin-top: 1rem;">🧾 Xuất hóa đơn</button>`;
   }
   
+  // ✅ Get customer display name (name → phone → email → id)
+  const customerDisplayName = getCustomerDisplayName(order.customer_id);
+  
   byId("order-detail-content").innerHTML = `
     <div class="detail-section">
       <span class="detail-label">Order ID:</span> ${order.id}
     </div>
     <div class="detail-section">
-      <span class="detail-label">Customer:</span> ${order.customer_id || ""}
+      <span class="detail-label">Customer:</span> ${customerDisplayName}
     </div>
     <div class="detail-section">
       <span class="detail-label">Status:</span> ${order.status}
@@ -339,6 +662,9 @@ function viewOrder(orderId) {
 }
 
 async function createInvoiceFromOrder(orderId) {
+  // ✅ Reload session from localStorage to ensure token is up to date
+  reloadSession();
+  
   if (!confirm("Tạo hóa đơn cho đơn hàng này?")) return;
   
   Loading.show("Đang tạo hóa đơn...");
@@ -357,7 +683,10 @@ async function createInvoiceFromOrder(orderId) {
       note: note || ""
     });
     
-    // ✅ Invalidate invoices cache after create
+    // ✅ Clear ALL cache after write action (create invoice)
+    CacheManager.clearAllCache();
+    
+    // ✅ Also invalidate specific caches to be thorough
     CacheManager.invalidateOnInvoiceChange();
     
     alert(`✅ Đã tạo hóa đơn: ${result.invoice_number || result.id}\n\nBạn có muốn xem hóa đơn ngay?`);
@@ -369,7 +698,14 @@ async function createInvoiceFromOrder(orderId) {
       await loadData(currentPage);
     }
   } catch (err) {
-    alert(`❌ Lỗi: ${err.message}`);
+    // ✅ Handle token expiration - prompt user to login again
+    if (err.message && (err.message.includes("Token expired") || err.message.includes("Unauthorized") || err.message.includes("hết hạn"))) {
+      alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+      resetSession();
+      window.location.reload();
+    } else {
+      alert(`❌ Lỗi: ${err.message}`);
+    }
   } finally {
     Loading.hide();
   }
@@ -470,7 +806,17 @@ function updateOrderTotal() {
 }
 
 function clearOrderForm() {
-  byId("field-customer").value = "";
+  const customerInput = byId("field-customer");
+  if (customerInput) {
+    customerInput.value = "";
+    if (customerInput._setSelectedCustomerId) {
+      customerInput._setSelectedCustomerId(null);
+    }
+  }
+  const autocompleteDiv = byId("customer-autocomplete");
+  if (autocompleteDiv) {
+    autocompleteDiv.style.display = "none";
+  }
   const dateEl = byId("field-order-date");
   if (dateEl) dateEl.value = "";
   byId("items-container").innerHTML = "";
@@ -500,13 +846,73 @@ function isValidDateTimeLocal_(s) {
 }
 
 async function saveOrder() {
-  const customerId = byId("field-customer").value.trim();
+  // ✅ Reload session from localStorage to ensure token is up to date
+  reloadSession();
+  
+  const customerInput = byId("field-customer");
+  const customerValue = customerInput.value.trim();
   const dateInput = byId("field-order-date");
   let orderDateTime = (dateInput && dateInput.value) ? String(dateInput.value).trim() : "";
   
-  if (!customerId) {
-    alert("Vui lòng nhập Customer ID");
+  if (!customerValue) {
+    alert("Vui lòng nhập tên khách hàng");
     return;
+  }
+  
+  // ✅ Check if customer was selected from autocomplete or needs to be created
+  let customerId = null;
+  const selectedCustomerId = customerInput._selectedCustomerId ? customerInput._selectedCustomerId() : null;
+  
+  if (selectedCustomerId) {
+    // Customer was selected from autocomplete
+    customerId = selectedCustomerId;
+  } else {
+    // Try to find customer by name or phone
+    const foundCustomer = customers.find(c => {
+      const name = (c.name || "").toLowerCase();
+      const phone = (c.phone || "").toLowerCase();
+      const query = customerValue.toLowerCase();
+      return name === query || phone === query || c.id === customerValue;
+    });
+    
+    if (foundCustomer) {
+      customerId = foundCustomer.id;
+    } else {
+      // ✅ Auto-create new customer if not found
+      try {
+        Loading.show("Đang tạo khách hàng mới...");
+        
+        // Parse customer value: could be "name" or "name|phone" or "name|phone|email"
+        const parts = customerValue.split("|").map(s => s.trim());
+        const customerName = parts[0] || customerValue;
+        const customerPhone = parts[1] || "";
+        const customerEmail = parts[2] || "";
+        
+        const newCustomer = await apiCall("customers.create", {
+          name: customerName,
+          phone: customerPhone || customerName, // Use name as phone if phone not provided
+          email: customerEmail
+        });
+        
+        customerId = newCustomer.id;
+        
+        // ✅ Clear ALL cache after write action (create customer)
+        CacheManager.clearAllCache();
+        
+        // ✅ Also invalidate customers cache specifically
+        CacheManager.clear('^customers_');
+        
+        // ✅ Add to local customers array
+        customers.push(newCustomer);
+        
+        Loading.hide();
+        console.log(`✅ Created new customer: ${newCustomer.name} (${newCustomer.id})`);
+      } catch (err) {
+        Loading.hide();
+        alert(`❌ Lỗi khi tạo khách hàng mới: ${err.message}`);
+        return;
+      }
+    }
   }
 
   if (!orderDateTime) {
@@ -554,18 +960,46 @@ async function saveOrder() {
     }
   }
 
-  await apiCall("orders.create", {
-    customer_id: customerId,
-    items: items,
-    created_at: orderDate // Format: yyyy-MM-dd HH:mm:ss
-  });
+  try {
+    const result = await apiCall("orders.create", {
+      customer_id: customerId,
+      items: items,
+      created_at: orderDate // Format: yyyy-MM-dd HH:mm:ss
+    });
 
-  // ✅ Invalidate cache after create
-  CacheManager.invalidateOnOrderChange();
-
-  closeModal();
-  clearOrderForm();
-  await loadData(1);
+    // ✅ Clear ALL cache after write action (create)
+    CacheManager.clearAllCache();
+    
+    // ✅ Also invalidate specific caches to be thorough
+    CacheManager.invalidateOnOrderChange();
+    
+    closeModal();
+    clearOrderForm();
+    
+    // ✅ Force reload from GAS (bypass Worker cache) to ensure fresh data with new order
+    // Clear ALL orders cache keys to force reload
+    CacheManager.clear('^orders_');
+    
+    // ✅ Small delay to ensure backend snapshot is complete
+    // (Backend snapshot is async, but we wait a bit to be safe)
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // ✅ Load page 1 to show new order - force from GAS to bypass Worker cache
+    await loadData(1, true); // true = forceFromGAS
+    
+    // ✅ After loadData, ensure UI is updated (loadData already calls renderOrders internally)
+    // But we can force render again to be safe
+    renderOrders();
+  } catch (err) {
+    // ✅ Handle token expiration - prompt user to login again
+    if (err.message && (err.message.includes("Token expired") || err.message.includes("Unauthorized") || err.message.includes("hết hạn"))) {
+      alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+      resetSession();
+      window.location.reload();
+    } else {
+      alert(`❌ Lỗi: ${err.message}`);
+    }
+  }
 }
 
 function formatPrice(price) {
