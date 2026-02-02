@@ -10,6 +10,10 @@ let totalPages = 0;
 let totalProducts = 0;
 const itemsPerPage = 50;
 
+// Image resize constants
+const IMAGE_MAX_WIDTH = 68;
+const IMAGE_MAX_HEIGHT = 86;
+
 // Override resetSession to include page-specific cleanup
 function resetSession() {
   // Call the original resetSession from common.js
@@ -42,6 +46,8 @@ function clearForm() {
   byId("field-amount-in-stock").value = "";
   byId("field-mpn").value = "";
   byId("field-brand").value = "";
+  // Clear image preview
+  hideImagePreview();
 }
 
 function readForm() {
@@ -76,6 +82,13 @@ function fillForm(product) {
   byId("field-amount-in-stock").value = product.amount_in_stock || "";
   byId("field-mpn").value = product.mpn || "";
   byId("field-brand").value = product.brand || "";
+  // Show image preview if exists
+  const imageLink = product["image link"] || "";
+  if (imageLink) {
+    showImagePreview(imageLink);
+  } else {
+    hideImagePreview();
+  }
 }
 
 // apiCall is now from common.js
@@ -116,10 +129,20 @@ function renderProducts() {
     return;
   }
 
-  tbody.innerHTML = products.map(p => `
+  tbody.innerHTML = products.map(p => {
+    const imageLink = p["image link"] || "";
+    const imageSrc = getImageSource(imageLink);
+    const imageHtml = imageSrc ? `<img src="${imageSrc}" alt="${p.title || p.name || ''}" class="product-thumbnail" onerror="this.style.display='none'">` : '';
+    
+    return `
     <tr data-product-id="${p.id}">
       <td>${p.id || ""}</td>
-      <td>${p.title || p.name || ""}</td>
+      <td>
+        <div class="product-title-cell">
+          ${imageHtml}
+          <span>${p.title || p.name || ""}</span>
+        </div>
+      </td>
       <td>${p.price || ""}</td>
       <td>${p.amount_in_stock || ""}</td>
       <td>${p.availability || ""}</td>
@@ -130,7 +153,8 @@ function renderProducts() {
         <button class="action-btn btn-danger" data-id="${p.id}" data-action="delete" style="margin-left: 0.5rem;">Xóa</button>
       </td>
     </tr>
-  `).join("");
+    `;
+  }).join("");
 
   Array.from(tbody.querySelectorAll(".action-btn")).forEach(btn => {
     btn.addEventListener("click", () => {
@@ -213,15 +237,27 @@ function addProductToList(product) {
     // Add new row at the top
     const newRow = document.createElement("tr");
     newRow.setAttribute("data-product-id", product.id);
+    const imageLink = product["image link"] || "";
+    const imageSrc = getImageSource(imageLink);
+    const imageHtml = imageSrc ? `<img src="${imageSrc}" alt="${product.title || product.name || ''}" class="product-thumbnail" onerror="this.style.display='none'">` : '';
+    
     newRow.innerHTML = `
       <td>${product.id || ""}</td>
-      <td>${product.title || product.name || ""}</td>
+      <td>
+        <div class="product-title-cell">
+          ${imageHtml}
+          <span>${product.title || product.name || ""}</span>
+        </div>
+      </td>
       <td>${product.price || ""}</td>
       <td>${product.amount_in_stock || ""}</td>
       <td>${product.availability || ""}</td>
       <td>${product.brand || ""}</td>
       <td>${product.mpn || ""}</td>
-      <td><button class="action-btn" data-id="${product.id}">Sửa</button></td>
+      <td>
+        <button class="action-btn" data-id="${product.id}">Sửa</button>
+        <button class="action-btn btn-danger" data-id="${product.id}" data-action="delete" style="margin-left: 0.5rem;">Xóa</button>
+      </td>
     `;
     tbody.insertBefore(newRow, tbody.firstChild);
     
@@ -259,6 +295,18 @@ async function loadProducts(page) {
     if (cached) {
       console.log("📦 Using cached products data (localStorage)");
       products = cached.items || [];
+      
+      // ✅ Sort products by created_at desc (newest first) - ensure correct order
+      products.sort(function(a, b) {
+        var dateA = a.created_at || "";
+        var dateB = b.created_at || "";
+        // Handle Date objects
+        if (dateA instanceof Date) dateA = dateA.toISOString();
+        if (dateB instanceof Date) dateB = dateB.toISOString();
+        // Compare as strings
+        return dateB.localeCompare(dateA);
+      });
+      
       totalProducts = cached.total || 0;
       totalPages = cached.totalPages || 0;
       currentPage = cached.page || 1;
@@ -297,6 +345,19 @@ async function loadProducts(page) {
       result = await apiCall("products.list", {
         page: page,
         limit: itemsPerPage
+      });
+    }
+    
+    // ✅ Sort products by created_at desc (newest first) - ensure correct order
+    if (result && result.items && Array.isArray(result.items)) {
+      result.items.sort(function(a, b) {
+        var dateA = a.created_at || "";
+        var dateB = b.created_at || "";
+        // Handle Date objects
+        if (dateA instanceof Date) dateA = dateA.toISOString();
+        if (dateB instanceof Date) dateB = dateB.toISOString();
+        // Compare as strings
+        return dateB.localeCompare(dateA);
       });
     }
     
@@ -524,6 +585,154 @@ byId("btn-save").addEventListener("click", async () => {
 byId("btn-logout").addEventListener("click", () => {
   resetSession();
 });
+
+// Image upload handlers
+byId("btn-upload-image").addEventListener("click", () => {
+  byId("file-image-upload").click();
+});
+
+byId("file-image-upload").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  if (!file.type.startsWith('image/')) {
+    alert('Vui lòng chọn file ảnh');
+    return;
+  }
+  
+  try {
+    const base64 = await resizeAndConvertToBase64(file, IMAGE_MAX_WIDTH, IMAGE_MAX_HEIGHT);
+    byId("field-image-link").value = base64;
+    showImagePreview(base64);
+  } catch (error) {
+    console.error('Error processing image:', error);
+    alert('Lỗi khi xử lý ảnh: ' + error.message);
+  }
+});
+
+byId("btn-remove-image").addEventListener("click", () => {
+  byId("field-image-link").value = "";
+  hideImagePreview();
+  byId("file-image-upload").value = "";
+});
+
+// Listen to image link input changes
+byId("field-image-link").addEventListener("input", (e) => {
+  const value = e.target.value.trim();
+  if (value) {
+    // Check if it's a base64 string or URL
+    if (value.startsWith('data:image')) {
+      showImagePreview(value);
+    } else if (value.startsWith('http://') || value.startsWith('https://')) {
+      showImagePreview(value);
+    } else {
+      hideImagePreview();
+    }
+  } else {
+    hideImagePreview();
+  }
+});
+
+/**
+ * Resize image to specified dimensions and convert to base64
+ * @param {File} file - Image file
+ * @param {number} maxWidth - Maximum width
+ * @param {number} maxHeight - Maximum height
+ * @returns {Promise<string>} Base64 string
+ */
+function resizeAndConvertToBase64(file, maxWidth, maxHeight) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      const img = new Image();
+      
+      img.onload = () => {
+        // Calculate new dimensions maintaining aspect ratio
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+        
+        // Create canvas and resize
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        
+        // Draw resized image
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Convert to base64 (JPEG format, quality 0.85)
+        const base64 = canvas.toDataURL('image/jpeg', 0.85);
+        resolve(base64);
+      };
+      
+      img.onerror = () => {
+        reject(new Error('Failed to load image'));
+      };
+      
+      img.src = e.target.result;
+    };
+    
+    reader.onerror = () => {
+      reject(new Error('Failed to read file'));
+    };
+    
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Show image preview
+ * @param {string} imageSrc - Image URL or base64 string
+ */
+function showImagePreview(imageSrc) {
+  const preview = byId("image-preview");
+  const previewImg = byId("image-preview-img");
+  
+  if (imageSrc) {
+    previewImg.src = imageSrc;
+    preview.style.display = 'block';
+  } else {
+    hideImagePreview();
+  }
+}
+
+/**
+ * Hide image preview
+ */
+function hideImagePreview() {
+  const preview = byId("image-preview");
+  preview.style.display = 'none';
+}
+
+/**
+ * Get image source for display (handles both URL and base64)
+ * @param {string} imageLink - Image link (URL or base64)
+ * @returns {string} Image source for img tag
+ */
+function getImageSource(imageLink) {
+  if (!imageLink) return '';
+  
+  // If it's already a base64 string, return as is
+  if (imageLink.startsWith('data:image')) {
+    return imageLink;
+  }
+  
+  // If it's a URL, return as is
+  if (imageLink.startsWith('http://') || imageLink.startsWith('https://')) {
+    return imageLink;
+  }
+  
+  // Otherwise, assume it's a base64 string without prefix
+  // Try to construct base64 data URL (this is a fallback)
+  return imageLink;
+}
 
 // Initialize WorkerAPI if configured
 if (window.WorkerAPI && window.CommonUtils && window.CommonUtils.WORKER_URL) {

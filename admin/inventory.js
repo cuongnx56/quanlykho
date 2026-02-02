@@ -82,9 +82,28 @@ async function loadData(page) {
     if (movementsResult) {
       console.log("📦 Using cached inventory movements (localStorage)");
       movements = movementsResult.items || [];
+      
+      // ✅ Sort movements by created_at desc (newest first) - ensure correct order
+      movements.sort(function(a, b) {
+        var dateA = a.created_at || "";
+        var dateB = b.created_at || "";
+        // Handle Date objects
+        if (dateA instanceof Date) dateA = dateA.toISOString();
+        if (dateB instanceof Date) dateB = dateB.toISOString();
+        // Compare as strings
+        return dateB.localeCompare(dateA);
+      });
+      
       totalMovements = movementsResult.total || 0;
       totalPages = movementsResult.totalPages || 0;
       currentPage = movementsResult.page || 1;
+      
+      renderSummary();
+      renderMovements();
+      renderProductOptions();
+      renderPagination();
+      Pagination.updateURL(currentPage, itemsPerPage);
+      return;
     } else {
       // ✅ Step 1: Try Cloudflare Worker first (fast, edge network)
       if (WorkerAPI && WorkerAPI.isConfigured()) {
@@ -112,6 +131,19 @@ async function loadData(page) {
         movementsResult = await apiCall("inventory.list", {
           page: page,
           limit: itemsPerPage
+        });
+      }
+      
+      // ✅ Sort movements by created_at desc (newest first) - ensure correct order
+      if (movementsResult && movementsResult.items && Array.isArray(movementsResult.items)) {
+        movementsResult.items.sort(function(a, b) {
+          var dateA = a.created_at || "";
+          var dateB = b.created_at || "";
+          // Handle Date objects
+          if (dateA instanceof Date) dateA = dateA.toISOString();
+          if (dateB instanceof Date) dateB = dateB.toISOString();
+          // Compare as strings
+          return dateB.localeCompare(dateA);
         });
       }
       

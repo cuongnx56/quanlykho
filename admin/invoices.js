@@ -63,6 +63,18 @@ async function loadInvoices(page) {
     if (result) {
       console.log("📦 Using cached invoices data (localStorage)");
       invoices = (result.items) ? result.items : [];
+      
+      // ✅ Sort invoices by created_at desc (newest first) - ensure correct order
+      invoices.sort(function(a, b) {
+        var dateA = a.created_at || "";
+        var dateB = b.created_at || "";
+        // Handle Date objects
+        if (dateA instanceof Date) dateA = dateA.toISOString();
+        if (dateB instanceof Date) dateB = dateB.toISOString();
+        // Compare as strings
+        return dateB.localeCompare(dateA);
+      });
+      
       renderInvoices();
       Pagination.render(result, currentPage, loadInvoices);
       Loading.hide();
@@ -96,6 +108,19 @@ async function loadInvoices(page) {
         token: session.token,
         page: page,
         limit: 50
+      });
+    }
+    
+    // ✅ Sort invoices by created_at desc (newest first) - ensure correct order
+    if (result && result.items && Array.isArray(result.items)) {
+      result.items.sort(function(a, b) {
+        var dateA = a.created_at || "";
+        var dateB = b.created_at || "";
+        // Handle Date objects
+        if (dateA instanceof Date) dateA = dateA.toISOString();
+        if (dateB instanceof Date) dateB = dateB.toISOString();
+        // Compare as strings
+        return dateB.localeCompare(dateA);
       });
     }
     

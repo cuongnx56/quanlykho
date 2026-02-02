@@ -125,7 +125,15 @@
       </div>
       <div>
         <label>Image link</label>
-        <input id="field-image-link" type="url">
+        <div class="image-input-group">
+          <input id="field-image-link" type="text" placeholder="Nhập link ảnh hoặc upload ảnh">
+          <button type="button" id="btn-upload-image" class="btn-upload">📷 Upload ảnh</button>
+          <input type="file" id="file-image-upload" accept="image/*" style="display: none;">
+        </div>
+        <div id="image-preview" class="image-preview" style="display: none;">
+          <img id="image-preview-img" src="" alt="Preview">
+          <button type="button" id="btn-remove-image" class="btn-remove-image">✕</button>
+        </div>
       </div>
       <div>
         <label>Giá nhập (Import price)</label>
