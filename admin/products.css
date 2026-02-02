@@ -256,9 +256,104 @@ th {
   background: #2563eb;
 }
 
+/* Image Upload Styles */
+.image-input-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.image-input-group input {
+  flex: 1;
+}
+
+.btn-upload {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  white-space: nowrap;
+  margin: 0;
+  transition: background 0.2s;
+}
+
+.btn-upload:hover {
+  background: #059669;
+}
+
+.image-preview {
+  margin-top: 12px;
+  position: relative;
+  display: inline-block;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+.image-preview img {
+  display: block;
+  max-width: 200px;
+  max-height: 250px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.btn-remove-image {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  transition: background 0.2s;
+}
+
+.btn-remove-image:hover {
+  background: #dc2626;
+}
+
+/* Product Table Image */
+.product-title-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.product-thumbnail {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+}
+
 @media (max-width: 640px) {
   .topbar .container {
     flex-direction: column;
     gap: 6px;
+  }
+  
+  .image-input-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .btn-upload {
+    width: 100%;
   }
 }
