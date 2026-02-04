@@ -3,12 +3,11 @@
 // Just use them directly (they're in global scope) or reference via window.CommonUtils
 // No need to redeclare - they're already available
 
-let products = [];
-let categories = []; // Store categories for dropdown
+let categories = [];
 let editMode = "create";
 let currentPage = 1;
 let totalPages = 0;
-let totalProducts = 0;
+let totalCategories = 0;
 const itemsPerPage = 50;
 
 // Image resize constants
@@ -22,34 +21,25 @@ function resetSession() {
     window._originalResetSession();
   }
   // Page-specific cleanup
-  products = [];
-  renderProducts();
+  categories = [];
+  renderCategories();
 }
 // Override window.resetSession with our version
 window.resetSession = resetSession;
 
 function openModal() {
-  byId("product-modal").classList.add("active");
+  byId("category-modal").classList.add("active");
 }
 
 function closeModal() {
-  byId("product-modal").classList.remove("active");
+  byId("category-modal").classList.remove("active");
 }
 
 function clearForm() {
   byId("field-id").value = "";
-  byId("field-title").value = "";
+  byId("field-name").value = "";
   byId("field-description").value = "";
-  byId("field-availability").value = "";
   byId("field-image-link").value = "";
-  byId("field-import-price").value = "";
-  byId("field-price").value = "";
-  byId("field-amount-in-stock").value = "";
-  byId("field-mpn").value = "";
-  byId("field-brand").value = "";
-  byId("field-category-select").value = "";
-  byId("field-category-new").value = "";
-  byId("field-category-id").value = "";
   // Clear image preview
   hideImagePreview();
 }
@@ -57,64 +47,21 @@ function clearForm() {
 function readForm() {
   var data = {
     id: byId("field-id").value.trim(),
-    title: byId("field-title").value.trim(),
+    name: byId("field-name").value.trim(),
     description: byId("field-description").value.trim(),
-    "availability": byId("field-availability").value.trim(),
-    "image link": byId("field-image-link").value.trim(),
-    "import_price": byId("field-import-price").value,
-    price: byId("field-price").value,
-    mpn: byId("field-mpn").value.trim(),
-    brand: byId("field-brand").value.trim()
+    "image link": byId("field-image-link").value.trim()
   };
-  
-  // Handle category_id
-  var categoryId = byId("field-category-id").value.trim();
-  var categorySelect = byId("field-category-select").value.trim();
-  var categoryNew = byId("field-category-new").value.trim();
-  
-  if (categoryId) {
-    data["category_id"] = categoryId;
-  } else if (categorySelect) {
-    data["category_id"] = categorySelect;
-  } else if (categoryNew) {
-    // Will be handled in saveProduct - create category first
-    data["_category_new_name"] = categoryNew;
-  }
-  
-  // Only include amount_in_stock when creating (not editing)
-  if (editMode === "create") {
-    data["amount_in_stock"] = byId("field-amount-in-stock").value;
-  }
   
   return data;
 }
 
-function fillForm(product) {
-  byId("field-id").value = product.id || "";
-  byId("field-title").value = product.title || product.name || "";
-  byId("field-description").value = product.description || "";
-  byId("field-availability").value = product.availability || "";
-  byId("field-image-link").value = product["image link"] || "";
-  byId("field-import-price").value = product.import_price || "";
-  byId("field-price").value = product.price || "";
-  byId("field-amount-in-stock").value = product.amount_in_stock || "";
-  byId("field-mpn").value = product.mpn || "";
-  byId("field-brand").value = product.brand || "";
-  
-  // Handle category_id
-  const categoryId = product.category_id || "";
-  if (categoryId) {
-    byId("field-category-id").value = categoryId;
-    byId("field-category-select").value = categoryId;
-    byId("field-category-new").value = "";
-  } else {
-    byId("field-category-select").value = "";
-    byId("field-category-new").value = "";
-    byId("field-category-id").value = "";
-  }
-  
+function fillForm(category) {
+  byId("field-id").value = category.id || "";
+  byId("field-name").value = category.name || "";
+  byId("field-description").value = category.description || "";
+  byId("field-image-link").value = category["image link"] || "";
   // Show image preview if exists
-  const imageLink = product["image link"] || "";
+  const imageLink = category["image link"] || "";
   if (imageLink) {
     showImagePreview(imageLink);
   } else {
@@ -146,42 +93,38 @@ async function login() {
   window.AuthSession.save(session);
   updateSessionUI();
   const urlParams = Pagination.getParamsFromURL();
-  await loadProducts(urlParams.page);
+  await loadCategories(urlParams.page);
 }
 
-function renderProducts() {
-  const tbody = byId("products-table").querySelector("tbody");
+function renderCategories() {
+  const tbody = byId("categories-table").querySelector("tbody");
   if (!session.token) {
-    tbody.innerHTML = `<tr><td colspan="8" class="muted">Đăng nhập để tải dữ liệu...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" class="muted">Đăng nhập để tải dữ liệu...</td></tr>`;
     return;
   }
-  if (!products.length) {
-    tbody.innerHTML = `<tr><td colspan="8" class="muted">Chưa có sản phẩm</td></tr>`;
+  if (!categories.length) {
+    tbody.innerHTML = `<tr><td colspan="4" class="muted">Chưa có danh mục</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = products.map(p => {
-    const imageLink = p["image link"] || "";
+  tbody.innerHTML = categories.map(c => {
+    const imageLink = c["image link"] || "";
     const imageSrc = getImageSource(imageLink);
-    const imageHtml = imageSrc ? `<img src="${imageSrc}" alt="${p.title || p.name || ''}" class="product-thumbnail" onerror="this.style.display='none'">` : '';
+    const imageHtml = imageSrc ? `<img src="${imageSrc}" alt="${c.name || ''}" class="category-thumbnail" onerror="this.style.display='none'">` : '';
     
     return `
-    <tr data-product-id="${p.id}">
-      <td>${p.id || ""}</td>
+    <tr data-category-id="${c.id}">
+      <td>${c.id || ""}</td>
       <td>
-        <div class="product-title-cell">
+        <div class="category-title-cell">
           ${imageHtml}
-          <span>${p.title || p.name || ""}</span>
+          <span>${c.name || ""}</span>
         </div>
       </td>
-      <td>${p.price || ""}</td>
-      <td>${p.amount_in_stock || ""}</td>
-      <td>${p.availability || ""}</td>
-      <td>${p.brand || ""}</td>
-      <td>${p.mpn || ""}</td>
+      <td>${c.description || ""}</td>
       <td>
-        <button class="action-btn" data-id="${p.id}">Sửa</button>
-        <button class="action-btn btn-danger" data-id="${p.id}" data-action="delete" style="margin-left: 0.5rem;">Xóa</button>
+        <button class="action-btn" data-id="${c.id}">Sửa</button>
+        <button class="action-btn btn-danger" data-id="${c.id}" data-action="delete" style="margin-left: 0.5rem;">Xóa</button>
       </td>
     </tr>
     `;
@@ -193,101 +136,105 @@ function renderProducts() {
       const action = btn.getAttribute("data-action");
       
       if (action === "delete") {
-        deleteProduct(id);
+        deleteCategory(id);
         return;
       }
       
       // Edit action
-      const product = products.find(p => p.id === id);
-      if (!product) return;
+      const category = categories.find(c => c.id === id);
+      if (!category) return;
       editMode = "edit";
-      fillForm(product);
-      byId("modal-title").textContent = "Sửa sản phẩm";
-      // Hide amount_in_stock field when editing
-      const wrapper = byId("field-amount-in-stock-wrapper");
-      if (wrapper) wrapper.style.display = "none";
+      fillForm(category);
+      byId("modal-title").textContent = "Sửa danh mục";
       openModal();
     });
   });
 }
 
-function updateProductInList(product) {
-  // Update in products array
-  const index = products.findIndex(p => p.id === product.id);
+function updateCategoryInList(category) {
+  // Update in categories array
+  const index = categories.findIndex(c => c.id === category.id);
   if (index !== -1) {
-    products[index] = product;
+    categories[index] = category;
   }
   
   // Update in DOM
-  const tbody = byId("products-table").querySelector("tbody");
-  const row = tbody.querySelector(`tr[data-product-id="${product.id}"]`);
+  const tbody = byId("categories-table").querySelector("tbody");
+  const row = tbody.querySelector(`tr[data-category-id="${category.id}"]`);
   if (row) {
+    const imageLink = category["image link"] || "";
+    const imageSrc = getImageSource(imageLink);
+    const imageHtml = imageSrc ? `<img src="${imageSrc}" alt="${category.name || ''}" class="category-thumbnail" onerror="this.style.display='none'">` : '';
+    
     row.innerHTML = `
-      <td>${product.id || ""}</td>
-      <td>${product.title || product.name || ""}</td>
-      <td>${product.price || ""}</td>
-      <td>${product.amount_in_stock || ""}</td>
-      <td>${product.availability || ""}</td>
-      <td>${product.brand || ""}</td>
-      <td>${product.mpn || ""}</td>
-      <td><button class="action-btn" data-id="${product.id}">Sửa</button></td>
+      <td>${category.id || ""}</td>
+      <td>
+        <div class="category-title-cell">
+          ${imageHtml}
+          <span>${category.name || ""}</span>
+        </div>
+      </td>
+      <td>${category.description || ""}</td>
+      <td>
+        <button class="action-btn" data-id="${category.id}">Sửa</button>
+        <button class="action-btn btn-danger" data-id="${category.id}" data-action="delete" style="margin-left: 0.5rem;">Xóa</button>
+      </td>
     `;
-    // Re-attach event listener
-    const btn = row.querySelector(".action-btn");
-    if (btn) {
+    // Re-attach event listeners
+    Array.from(row.querySelectorAll(".action-btn")).forEach(btn => {
       btn.addEventListener("click", () => {
-        editMode = "edit";
-        fillForm(product);
-        byId("modal-title").textContent = "Sửa sản phẩm";
-        const wrapper = byId("field-amount-in-stock-wrapper");
-        if (wrapper) wrapper.style.display = "none";
-        openModal();
+        const id = btn.getAttribute("data-id");
+        const action = btn.getAttribute("data-action");
+        if (action === "delete") {
+          deleteCategory(id);
+        } else {
+          editMode = "edit";
+          fillForm(category);
+          byId("modal-title").textContent = "Sửa danh mục";
+          openModal();
+        }
       });
-    }
+    });
   }
 }
 
-function addProductToList(product) {
-  // Add to products array (at the beginning if on page 1)
+function addCategoryToList(category) {
+  // Add to categories array (at the beginning if on page 1)
   if (currentPage === 1) {
-    products.unshift(product);
+    categories.unshift(category);
     // If exceeds page limit, remove last item
-    if (products.length > itemsPerPage) {
-      products.pop();
+    if (categories.length > itemsPerPage) {
+      categories.pop();
     }
   }
   
   // Update DOM
-  const tbody = byId("products-table").querySelector("tbody");
-  if (tbody && products.length > 0) {
-    // Remove "no products" message if exists
+  const tbody = byId("categories-table").querySelector("tbody");
+  if (tbody && categories.length > 0) {
+    // Remove "no categories" message if exists
     if (tbody.querySelector(".muted")) {
       tbody.innerHTML = "";
     }
     
     // Add new row at the top
     const newRow = document.createElement("tr");
-    newRow.setAttribute("data-product-id", product.id);
-    const imageLink = product["image link"] || "";
+    newRow.setAttribute("data-category-id", category.id);
+    const imageLink = category["image link"] || "";
     const imageSrc = getImageSource(imageLink);
-    const imageHtml = imageSrc ? `<img src="${imageSrc}" alt="${product.title || product.name || ''}" class="product-thumbnail" onerror="this.style.display='none'">` : '';
+    const imageHtml = imageSrc ? `<img src="${imageSrc}" alt="${category.name || ''}" class="category-thumbnail" onerror="this.style.display='none'">` : '';
     
     newRow.innerHTML = `
-      <td>${product.id || ""}</td>
+      <td>${category.id || ""}</td>
       <td>
-        <div class="product-title-cell">
+        <div class="category-title-cell">
           ${imageHtml}
-          <span>${product.title || product.name || ""}</span>
+          <span>${category.name || ""}</span>
         </div>
       </td>
-      <td>${product.price || ""}</td>
-      <td>${product.amount_in_stock || ""}</td>
-      <td>${product.availability || ""}</td>
-      <td>${product.brand || ""}</td>
-      <td>${product.mpn || ""}</td>
+      <td>${category.description || ""}</td>
       <td>
-        <button class="action-btn" data-id="${product.id}">Sửa</button>
-        <button class="action-btn btn-danger" data-id="${product.id}" data-action="delete" style="margin-left: 0.5rem;">Xóa</button>
+        <button class="action-btn" data-id="${category.id}">Sửa</button>
+        <button class="action-btn btn-danger" data-id="${category.id}" data-action="delete" style="margin-left: 0.5rem;">Xóa</button>
       </td>
     `;
     tbody.insertBefore(newRow, tbody.firstChild);
@@ -296,20 +243,23 @@ function addProductToList(product) {
     Array.from(tbody.querySelectorAll(".action-btn")).forEach(btn => {
       btn.addEventListener("click", () => {
         const id = btn.getAttribute("data-id");
-        const p = products.find(pr => pr.id === id);
-        if (!p) return;
-        editMode = "edit";
-        fillForm(p);
-        byId("modal-title").textContent = "Sửa sản phẩm";
-        const wrapper = byId("field-amount-in-stock-wrapper");
-        if (wrapper) wrapper.style.display = "none";
-        openModal();
+        const action = btn.getAttribute("data-action");
+        const c = categories.find(cat => cat.id === id);
+        if (!c) return;
+        if (action === "delete") {
+          deleteCategory(id);
+        } else {
+          editMode = "edit";
+          fillForm(c);
+          byId("modal-title").textContent = "Sửa danh mục";
+          openModal();
+        }
       });
     });
   }
 }
 
-async function loadProducts(page) {
+async function loadCategories(page) {
   // Only read from URL when caller doesn't explicitly pass a page
   if (page == null) {
     const urlParams = Pagination.getParamsFromURL();
@@ -320,15 +270,15 @@ async function loadProducts(page) {
   
   return apiCallWithLoading(async () => {
     // ✅ Step 1: Check frontend cache first (localStorage)
-    const cacheKey = CacheManager.key("products", "list", page, itemsPerPage);
+    const cacheKey = CacheManager.key("categories", "list", page, itemsPerPage);
     const cached = CacheManager.get(cacheKey);
     
     if (cached) {
-      console.log("📦 Using cached products data (localStorage)");
-      products = cached.items || [];
+      console.log("📦 Using cached categories data (localStorage)");
+      categories = cached.items || [];
       
-      // ✅ Sort products by created_at desc (newest first) - ensure correct order
-      products.sort(function(a, b) {
+      // ✅ Sort categories by created_at desc (newest first) - ensure correct order
+      categories.sort(function(a, b) {
         var dateA = a.created_at || "";
         var dateB = b.created_at || "";
         // Handle Date objects
@@ -338,11 +288,11 @@ async function loadProducts(page) {
         return dateB.localeCompare(dateA);
       });
       
-      totalProducts = cached.total || 0;
+      totalCategories = cached.total || 0;
       totalPages = cached.totalPages || 0;
       currentPage = cached.page || 1;
       
-      renderProducts();
+      renderCategories();
       renderPagination();
       Pagination.updateURL(currentPage, itemsPerPage);
       return;
@@ -353,8 +303,8 @@ async function loadProducts(page) {
     
     if (WorkerAPI && WorkerAPI.isConfigured()) {
       try {
-        console.log("🚀 Trying Cloudflare Worker for products.list...");
-        result = await WorkerAPI.productsList({
+        console.log("🚀 Trying Cloudflare Worker for categories.list...");
+        result = await WorkerAPI.categoriesList({
           page: page,
           limit: itemsPerPage
         });
@@ -373,13 +323,13 @@ async function loadProducts(page) {
     // ✅ Step 3: Fallback to GAS if Worker fails or cache miss
     if (!result) {
       console.log("📡 Fetching from GAS /exec endpoint...");
-      result = await apiCall("products.list", {
+      result = await apiCall("categories.list", {
         page: page,
         limit: itemsPerPage
       });
     }
     
-    // ✅ Sort products by created_at desc (newest first) - ensure correct order
+    // ✅ Sort categories by created_at desc (newest first) - ensure correct order
     if (result && result.items && Array.isArray(result.items)) {
       result.items.sort(function(a, b) {
         var dateA = a.created_at || "";
@@ -392,40 +342,40 @@ async function loadProducts(page) {
       });
     }
     
-    products = result.items || [];
-    totalProducts = result.total || 0;
+    categories = result.items || [];
+    totalCategories = result.total || 0;
     totalPages = result.totalPages || 0;
     currentPage = result.page || 1;
     
     // Save to frontend cache
     CacheManager.set(cacheKey, result);
     
-    renderProducts();
+    renderCategories();
     renderPagination();
     
     // Update URL
     Pagination.updateURL(currentPage, itemsPerPage);
-  }, "Đang tải sản phẩm...");
+  }, "Đang tải danh mục...");
 }
 
 function renderPagination() {
   Pagination.render(
-    "products-pagination",
+    "categories-pagination",
     currentPage,
     totalPages,
-    totalProducts,
-    loadProducts,
-    "sản phẩm"
+    totalCategories,
+    loadCategories,
+    "danh mục"
   );
 }
 
-async function saveProduct() {
+async function saveCategory() {
   // ✅ Reload session from localStorage to ensure token is up to date
   reloadSession();
   
   const data = readForm();
-  if (!data.id || !data.title || data.price === "") {
-    alert("ID, Title và Price là bắt buộc");
+  if (!data.id || !data.name) {
+    alert("ID và Name là bắt buộc");
     return;
   }
 
@@ -439,54 +389,18 @@ async function saveProduct() {
     return;
   }
 
-  // ✅ Handle category: if new category name provided, create category first
-  if (data._category_new_name) {
-    try {
-      Loading.show("Đang tạo danh mục mới...");
-      const newCategory = await apiCall("categories.create", {
-        token: session.token,
-        name: data._category_new_name
-      });
-      data.category_id = newCategory.id;
-      delete data._category_new_name;
-      // Reload categories to update dropdown
-      await loadCategories();
-      Loading.hide();
-    } catch (err) {
-      Loading.hide();
-      // If category already exists, try to find it
-      if (err.message && err.message.includes("đã tồn tại")) {
-        // Try to find existing category by name
-        await loadCategories();
-        const existingCategory = categories.find(c => 
-          String(c.name || "").trim().toLowerCase() === String(data._category_new_name).trim().toLowerCase()
-        );
-        if (existingCategory) {
-          data.category_id = existingCategory.id;
-          delete data._category_new_name;
-        } else {
-          alert("Lỗi khi tạo danh mục: " + err.message);
-          return;
-        }
-      } else {
-        alert("Lỗi khi tạo danh mục: " + err.message);
-        return;
-      }
-    }
-  }
-
-  let savedProduct;
+  let savedCategory;
   try {
     if (editMode === "create") {
       data.token = session.token;
-      savedProduct = await apiCall("products.create", data);
+      savedCategory = await apiCall("categories.create", data);
     } else {
       if (!data.id) {
-        alert("Thiếu ID sản phẩm");
+        alert("Thiếu ID danh mục");
         return;
       }
       data.token = session.token;
-      savedProduct = await apiCall("products.update", data);
+      savedCategory = await apiCall("categories.update", data);
     }
 
     // ✅ Clear ALL cache after write action (create/update)
@@ -500,18 +414,18 @@ async function saveProduct() {
     
     // ✅ Update UI directly instead of reloading
     if (editMode === "create") {
-      // Add new product to current page if on page 1, otherwise reload
-      if (currentPage === 1 && products.length < itemsPerPage) {
-        addProductToList(savedProduct);
-        totalProducts++;
-        totalPages = Math.ceil(totalProducts / itemsPerPage);
+      // Add new category to current page if on page 1, otherwise reload
+      if (currentPage === 1 && categories.length < itemsPerPage) {
+        addCategoryToList(savedCategory);
+        totalCategories++;
+        totalPages = Math.ceil(totalCategories / itemsPerPage);
         renderPagination();
       } else {
-        await loadProducts(currentPage);
+        await loadCategories(currentPage);
       }
     } else {
-      // Update existing product in list
-      updateProductInList(savedProduct);
+      // Update existing category in list
+      updateCategoryInList(savedCategory);
     }
   } catch (err) {
     // ✅ Handle token expiration - prompt user to login again
@@ -526,19 +440,19 @@ async function saveProduct() {
   }
 }
 
-async function deleteProduct(productId) {
+async function deleteCategory(categoryId) {
   // ✅ Reload session from localStorage to ensure token is up to date
   reloadSession();
   
-  if (!productId) return;
+  if (!categoryId) return;
   
-  const product = products.find(p => p.id === productId);
-  if (!product) {
-    alert("Không tìm thấy sản phẩm");
+  const category = categories.find(c => c.id === categoryId);
+  if (!category) {
+    alert("Không tìm thấy danh mục");
     return;
   }
   
-  const confirmMsg = `Xác nhận xóa sản phẩm "${product.id}"?\n\nLưu ý: Hành động này không thể hoàn tác.`;
+  const confirmMsg = `Xác nhận xóa danh mục "${category.id}"?\n\nLưu ý: Hành động này không thể hoàn tác.`;
   if (!confirm(confirmMsg)) return;
   
   if (!session.token) {
@@ -551,11 +465,11 @@ async function deleteProduct(productId) {
     return;
   }
   
-  Loading.show("Đang xóa sản phẩm...");
+  Loading.show("Đang xóa danh mục...");
   try {
-    await apiCall("products.delete", {
+    await apiCall("categories.delete", {
       token: session.token,
-      id: productId
+      id: categoryId
     });
     
     // ✅ Clear ALL cache after write action (delete)
@@ -564,21 +478,21 @@ async function deleteProduct(productId) {
     // ✅ Also invalidate specific caches to be thorough
     CacheManager.invalidateOnProductChange();
     
-    // ✅ Remove product from UI
-    removeProductFromList(productId);
+    // ✅ Remove category from UI
+    removeCategoryFromList(categoryId);
     
     // Update totals
-    totalProducts--;
-    totalPages = Math.ceil(totalProducts / itemsPerPage);
+    totalCategories--;
+    totalPages = Math.ceil(totalCategories / itemsPerPage);
     
     // If current page becomes empty and not page 1, go to previous page
-    if (products.length === 0 && currentPage > 1) {
-      await loadProducts(currentPage - 1);
+    if (categories.length === 0 && currentPage > 1) {
+      await loadCategories(currentPage - 1);
     } else {
       renderPagination();
     }
     
-    alert("✅ Đã xóa sản phẩm thành công");
+    alert("✅ Đã xóa danh mục thành công");
   } catch (err) {
     if (err.message && (err.message.includes("Unauthorized") || err.message.includes("Forbidden"))) {
       alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.\n\n" + err.message);
@@ -591,23 +505,23 @@ async function deleteProduct(productId) {
   }
 }
 
-function removeProductFromList(productId) {
-  // Remove from products array
-  const index = products.findIndex(p => p.id === productId);
+function removeCategoryFromList(categoryId) {
+  // Remove from categories array
+  const index = categories.findIndex(c => c.id === categoryId);
   if (index !== -1) {
-    products.splice(index, 1);
+    categories.splice(index, 1);
   }
   
   // Remove from DOM
-  const tbody = byId("products-table").querySelector("tbody");
-  const row = tbody.querySelector(`tr[data-product-id="${productId}"]`);
+  const tbody = byId("categories-table").querySelector("tbody");
+  const row = tbody.querySelector(`tr[data-category-id="${categoryId}"]`);
   if (row) {
     row.remove();
   }
   
-  // If no products left, show empty message
-  if (products.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" class="muted">Chưa có sản phẩm</td></tr>`;
+  // If no categories left, show empty message
+  if (categories.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" class="muted">Chưa có danh mục</td></tr>`;
   }
 }
 
@@ -626,10 +540,7 @@ byId("btn-login").addEventListener("click", async () => {
 byId("btn-new").addEventListener("click", () => {
   editMode = "create";
   clearForm();
-  byId("modal-title").textContent = "Thêm sản phẩm";
-  // Show amount_in_stock field when creating
-  const wrapper = byId("field-amount-in-stock-wrapper");
-  if (wrapper) wrapper.style.display = "";
+  byId("modal-title").textContent = "Thêm danh mục";
   openModal();
 });
 
@@ -641,7 +552,7 @@ byId("btn-save").addEventListener("click", async () => {
   const btn = byId("btn-save");
   Loading.button(btn, true);
   try {
-    await saveProduct();
+    await saveCategory();
   } catch (err) {
     alert(err.message);
   } finally {
@@ -809,94 +720,13 @@ if (window.WorkerAPI && window.CommonUtils && window.CommonUtils.WORKER_URL) {
   console.log("ℹ️ WorkerAPI available but WORKER_URL not configured. Using GAS only.");
 }
 
-/**
- * Load categories for dropdown
- */
-async function loadCategories() {
-  try {
-    let result = null;
-    
-    // Try WorkerAPI first
-    if (WorkerAPI && WorkerAPI.isConfigured()) {
-      try {
-        result = await WorkerAPI.categoriesList({
-          page: 1,
-          limit: 1000 // Get all categories
-        });
-      } catch (error) {
-        console.error("⚠️ Worker error loading categories:", error);
-      }
-    }
-    
-    // Fallback to GAS
-    if (!result) {
-      result = await apiCall("categories.list", {
-        page: 1,
-        limit: 1000
-      });
-    }
-    
-    categories = result.items || [];
-    renderCategoryDropdown();
-  } catch (err) {
-    console.error("Error loading categories:", err);
-    categories = [];
-    renderCategoryDropdown();
-  }
-}
-
-/**
- * Render category dropdown
- */
-function renderCategoryDropdown() {
-  const select = byId("field-category-select");
-  if (!select) return;
-  
-  // Keep current value
-  const currentValue = select.value;
-  
-  // Clear and add default option
-  select.innerHTML = '<option value="">-- Chọn danh mục --</option>';
-  
-  // Add categories
-  categories.forEach(category => {
-    const option = document.createElement("option");
-    option.value = category.id || "";
-    option.textContent = category.name || "";
-    select.appendChild(option);
-  });
-  
-  // Restore value if still exists
-  if (currentValue) {
-    select.value = currentValue;
-  }
-}
-
-// Event listeners for category fields
-byId("field-category-select").addEventListener("change", (e) => {
-  const value = e.target.value;
-  byId("field-category-id").value = value;
-  if (value) {
-    byId("field-category-new").value = ""; // Clear new category input
-  }
-});
-
-byId("field-category-new").addEventListener("input", (e) => {
-  const value = e.target.value.trim();
-  if (value) {
-    byId("field-category-select").value = ""; // Clear select
-    byId("field-category-id").value = ""; // Clear hidden field
-  }
-});
-
 syncInputsFromSession();
 applyQueryParams_();
 updateSessionUI();
 if (session.token) {
   const urlParams = Pagination.getParamsFromURL();
-  loadProducts(urlParams.page).catch(err => {
+  loadCategories(urlParams.page).catch(err => {
     alert(err.message);
     resetSession();
   });
-  loadCategories(); // Load categories on page load
 }

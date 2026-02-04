@@ -2,10 +2,10 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <title>Quản lý Hóa đơn</title>
+  <title>Admin Dashboard - Leads</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="sidebar.css">
-  <link rel="stylesheet" href="invoices.css">
+  <link rel="stylesheet" href="leads.css">
   <link rel="stylesheet" href="loading.css">
   <link rel="stylesheet" href="pagination.css">
   <link rel="stylesheet" href="navigation.css">
@@ -18,9 +18,9 @@
 
 <header class="topbar">
   <div class="container">
-    <h1>🧾 Hóa đơn</h1>
+    <h1>🧲 Leads</h1>
     <div class="session-actions">
-    <div id="session-info" class="session-info"></div>
+      <div id="session-info" class="session-info"></div>
       <button id="btn-logout" class="btn-logout hidden" type="button">Đăng xuất</button>
     </div>
   </div>
@@ -48,85 +48,58 @@
 
   <section class="card">
     <div class="card-header">
-      <h2>Danh sách Hóa đơn</h2>
+      <h2>Danh sách Leads (mới → cũ)</h2>
     </div>
 
     <div class="table-wrap">
-      <table id="invoices-table">
+      <table id="leads-table">
         <thead>
           <tr>
-            <th>Số HĐ</th>
-            <th>Order ID</th>
-            <th>Khách hàng</th>
-            <th class="text-right">Tổng tiền</th>
-            <th>Ngày tạo</th>
-            <th class="text-center">Actions</th>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th>Source</th>
+            <th>Status</th>
+            <th>Note</th>
+            <th>Created At</th>
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td colspan="6" class="text-center">Đang tải...</td>
-          </tr>
+          <tr><td colspan="8" class="muted">Đăng nhập để tải dữ liệu...</td></tr>
         </tbody>
       </table>
+      <div id="leads-pagination"></div>
     </div>
-
-    <div id="pagination" class="pagination"></div>
   </section>
 </main>
 
-<!-- Modal xem/In hóa đơn -->
-<div id="invoice-modal" class="modal">
-  <div class="modal-content invoice-content">
-    <div class="modal-header">
-      <h2>Hóa đơn</h2>
-      <button class="modal-close" onclick="closeInvoiceModal()">&times;</button>
-    </div>
-    <div id="invoice-body" class="invoice-body">
-      <!-- Invoice content will be rendered here -->
-    </div>
-    <div class="modal-footer">
-      <button class="btn-secondary" onclick="printInvoice()">🖨️ In hóa đơn</button>
-      <button class="btn-secondary" onclick="closeInvoiceModal()">Đóng</button>
-    </div>
-  </div>
-</div>
-
-<script src="common.js"></script>
-<script src="auth.js"></script>
 <script src="loading.js"></script>
-<script src="pagination.js"></script>
+<script src="auth.js"></script>
 <script src="cache.js"></script>
+<script src="common.js"></script>
 <script src="worker-api.js"></script>
+<script src="pagination.js"></script>
 <script>
   // Load sidebar HTML from sidebar.html
   (function() {
     fetch('sidebar.html')
       .then(response => {
-        if (!response.ok) {
-          throw new Error('Failed to load sidebar');
-        }
+        if (!response.ok) throw new Error('Failed to load sidebar');
         return response.text();
       })
       .then(html => {
         document.getElementById('sidebar-container').innerHTML = html;
-        // Initialize sidebar after loading
         const script = document.createElement('script');
         script.src = 'sidebar.js';
-        script.onload = function() {
-          console.log('✅ Sidebar loaded and initialized');
-        };
         document.body.appendChild(script);
       })
       .catch(err => {
         console.error('❌ Error loading sidebar:', err);
-        // Fallback: show error message
-        document.getElementById('sidebar-container').innerHTML = 
-          '<div style="padding: 20px; color: #ef4444;">Error loading sidebar</div>';
       });
   })();
 </script>
-<script src="invoices.js"></script>
-
+<script src="leads.js"></script>
 </body>
 </html>
+

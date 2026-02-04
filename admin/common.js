@@ -251,6 +251,16 @@ window.CommonUtils = {
   reloadSession
 };
 
+/**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(text) {
+  if (text == null) return '';
+  const div = document.createElement('div');
+  div.textContent = String(text);
+  return div.innerHTML;
+}
+
 // Make functions globally available
 // Note: resetSession is exported but can be overridden by individual pages
 window.byId = byId;
@@ -262,6 +272,7 @@ window.applyQueryParams_ = applyQueryParams_;
 window.resetSession = resetSession;
 window.apiCall = apiCall;
 window.formatPrice = formatPrice;
+window.escapeHtml = escapeHtml;
 window.login = login;
 window.reloadSession = reloadSession;
 

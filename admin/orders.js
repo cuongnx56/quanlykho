@@ -105,10 +105,11 @@ function setupCustomerAutocomplete() {
     
     // Filter customers by name or phone
     filteredCustomers = customers.filter(c => {
-      const name = (c.name || "").toLowerCase();
-      const phone = (c.phone || "").toLowerCase();
-      const id = (c.id || "").toLowerCase();
-      return name.includes(query) || phone.includes(query) || id.includes(query);
+      const name = String(c.name || "").toLowerCase();
+      const phone = String(c.phone || "").toLowerCase();
+      const email = String(c.email || "").toLowerCase();
+      const id = String(c.id || "").toLowerCase();
+      return name.includes(query) || phone.includes(query) || email.includes(query) || id.includes(query);
     });
     
     // Show autocomplete dropdown
@@ -655,6 +656,29 @@ function viewOrder(orderId) {
     <div class="detail-section">
       <span class="detail-label">Tổng tiền:</span> <strong>${formatPrice(order.total || 0)}</strong>
     </div>
+    ${order.shipping_info ? (() => {
+      try {
+        const shipping = JSON.parse(order.shipping_info);
+        let shippingHtml = '<div class="shipping-info-detail">';
+        if (shipping.address) shippingHtml += `<div><strong>Địa chỉ:</strong> ${escapeHtml(shipping.address)}</div>`;
+        if (shipping.city) shippingHtml += `<div><strong>Thành phố/Tỉnh:</strong> ${escapeHtml(shipping.city)}</div>`;
+        if (shipping.zipcode) shippingHtml += `<div><strong>Mã bưu điện:</strong> ${escapeHtml(shipping.zipcode)}</div>`;
+        if (shipping.note) shippingHtml += `<div><strong>Ghi chú giao hàng:</strong> ${escapeHtml(shipping.note)}</div>`;
+        shippingHtml += '</div>';
+        return `<div class="detail-section">
+          <span class="detail-label">Thông tin giao hàng:</span>
+          ${shippingHtml}
+        </div>`;
+      } catch (e) {
+        // Fallback: display as plain text if not valid JSON
+        return `<div class="detail-section">
+          <span class="detail-label">Thông tin giao hàng:</span> ${escapeHtml(order.shipping_info)}
+        </div>`;
+      }
+    })() : ''}
+    ${order.note ? `<div class="detail-section">
+      <span class="detail-label">Ghi chú đơn hàng:</span> ${escapeHtml(order.note)}
+    </div>` : ''}
     ${invoiceBtn}
   `;
   
@@ -822,6 +846,19 @@ function clearOrderForm() {
   byId("items-container").innerHTML = "";
   currentItems = [];
   byId("order-total").textContent = formatPrice(0);
+  
+  // Clear shipping fields
+  const shippingAddress = byId("field-shipping-address");
+  const shippingCity = byId("field-shipping-city");
+  const shippingZipcode = byId("field-shipping-zipcode");
+  const shippingNote = byId("field-shipping-note");
+  const orderNote = byId("field-order-note");
+  
+  if (shippingAddress) shippingAddress.value = "";
+  if (shippingCity) shippingCity.value = "";
+  if (shippingZipcode) shippingZipcode.value = "";
+  if (shippingNote) shippingNote.value = "";
+  if (orderNote) orderNote.value = "";
 }
 
 function getNowDateTimeLocal_() {
@@ -869,10 +906,11 @@ async function saveOrder() {
   } else {
     // Try to find customer by name or phone
     const foundCustomer = customers.find(c => {
-      const name = (c.name || "").toLowerCase();
-      const phone = (c.phone || "").toLowerCase();
+      const name = String(c.name || "").toLowerCase();
+      const phone = String(c.phone || "").toLowerCase();
+      const email = String(c.email || "").toLowerCase();
       const query = customerValue.toLowerCase();
-      return name === query || phone === query || c.id === customerValue;
+      return name === query || phone === query || email === query || c.id === customerValue;
     });
     
     if (foundCustomer) {
@@ -960,11 +998,40 @@ async function saveOrder() {
     }
   }
 
+  // Build shipping_info JSON
+  const shippingAddress = byId("field-shipping-address")?.value.trim() || "";
+  const shippingCity = byId("field-shipping-city")?.value.trim() || "";
+  const shippingZipcode = byId("field-shipping-zipcode")?.value.trim() || "";
+  const shippingNote = byId("field-shipping-note")?.value.trim() || "";
+  const orderNote = byId("field-order-note")?.value.trim() || "";
+  
+  if (!shippingAddress) {
+    alert("Vui lòng nhập địa chỉ giao hàng");
+    return;
+  }
+  
+  // Build shipping_info as JSON object
+  const shippingInfo = {
+    address: shippingAddress,
+    city: shippingCity || undefined,
+    zipcode: shippingZipcode || undefined,
+    note: shippingNote || undefined
+  };
+  
+  // Remove undefined fields
+  Object.keys(shippingInfo).forEach(key => {
+    if (shippingInfo[key] === undefined) {
+      delete shippingInfo[key];
+    }
+  });
+  
   try {
     const result = await apiCall("orders.create", {
       customer_id: customerId,
       items: items,
-      created_at: orderDate // Format: yyyy-MM-dd HH:mm:ss
+      created_at: orderDate, // Format: yyyy-MM-dd HH:mm:ss
+      shipping_info: JSON.stringify(shippingInfo),
+      note: orderNote || undefined
     });
 
     // ✅ Clear ALL cache after write action (create)
