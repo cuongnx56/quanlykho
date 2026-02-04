@@ -113,6 +113,17 @@ const WorkerAPI = {
   },
 
   /**
+   * Categories list - Read from Worker
+   * Falls back to GAS if worker fails or cache miss
+   * 
+   * @param {Object} params - { page, limit }
+   * @returns {Promise<Object>} { items, total, page, limit, totalPages }
+   */
+  async categoriesList(params = {}) {
+    return this.call('/categories', params);
+  },
+
+  /**
    * Orders list - Read from Worker
    * Falls back to GAS if worker fails or cache miss
    * 
@@ -154,6 +165,17 @@ const WorkerAPI = {
    */
   async inventoryList(params = {}) {
     return this.call('/inventory', params);
+  },
+
+  /**
+   * Leads list - Read from Worker
+   * Falls back to GAS if worker fails or cache miss
+   * 
+   * @param {Object} params - { page, limit }
+   * @returns {Promise<Object>} { items, total, page, limit, totalPages }
+   */
+  async leadsList(params = {}) {
+    return this.call('/leads', params);
   },
 
   /**

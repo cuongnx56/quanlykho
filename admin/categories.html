@@ -2,10 +2,10 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <title>Admin Dashboard - Products</title>
+  <title>Admin Dashboard - Categories</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="sidebar.css">
-  <link rel="stylesheet" href="products.css">
+  <link rel="stylesheet" href="categories.css">
   <link rel="stylesheet" href="loading.css">
   <link rel="stylesheet" href="pagination.css">
   <link rel="stylesheet" href="navigation.css">
@@ -18,7 +18,7 @@
 
 <header class="topbar">
   <div class="container">
-    <h1>🧩 Sản phẩm</h1>
+    <h1>📁 Danh mục</h1>
     <div class="session-actions">
     <div id="session-info" class="session-info"></div>
       <button id="btn-logout" class="btn-logout hidden" type="button">Đăng xuất</button>
@@ -48,58 +48,50 @@
 
   <section class="card">
     <div class="card-header">
-      <h2>Danh sách sản phẩm</h2>
+      <h2>Danh sách danh mục</h2>
       <div class="card-actions">
-        <button id="btn-new" class="btn-secondary">+ Thêm sản phẩm</button>
+        <button id="btn-new" class="btn-secondary">+ Thêm danh mục</button>
       </div>
     </div>
 
     <div class="table-wrap">
-      <table id="products-table">
+      <table id="categories-table">
         <thead>
           <tr>
             <th>ID</th>
-            <th>Title</th>
-            <th>Price</th>
-            <th>Stock</th>
-            <th>Availability</th>
-            <th>Brand</th>
-            <th>MPN</th>
+            <th>Name</th>
+            <th>Description</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          <tr><td colspan="7" class="muted">Đăng nhập để tải dữ liệu...</td></tr>
+          <tr><td colspan="4" class="muted">Đăng nhập để tải dữ liệu...</td></tr>
         </tbody>
       </table>
-      <div id="products-pagination"></div>
+      <div id="categories-pagination"></div>
     </div>
   </section>
 </main>
 
-<div id="product-modal" class="modal">
+<div id="category-modal" class="modal">
   <div class="modal-content">
     <div class="modal-header">
-      <h3 id="modal-title">Thêm sản phẩm</h3>
+      <h3 id="modal-title">Thêm danh mục</h3>
       <button id="btn-close" class="btn-close">×</button>
     </div>
 
     <div class="grid">
       <div>
-        <label>ID (mã sản phẩm) *</label>
+        <label>ID (mã danh mục) *</label>
         <input id="field-id" type="text">
       </div>
       <div>
-        <label>Title *</label>
-        <input id="field-title" type="text">
+        <label>Name *</label>
+        <input id="field-name" type="text">
       </div>
       <div>
         <label>Description</label>
         <textarea id="field-description" rows="3"></textarea>
-      </div>
-      <div>
-        <label>Availability</label>
-        <input id="field-availability" type="text" placeholder="in stock">
       </div>
       <div>
         <label>Image link</label>
@@ -112,37 +104,6 @@
           <img id="image-preview-img" src="" alt="Preview">
           <button type="button" id="btn-remove-image" class="btn-remove-image">✕</button>
         </div>
-      </div>
-      <div>
-        <label>Giá nhập (Import price)</label>
-        <input id="field-import-price" type="number" step="0.01">
-      </div>
-      <div>
-        <label>Giá bán đề xuất (Price) *</label>
-        <input id="field-price" type="number" step="0.01">
-      </div>
-      <div id="field-amount-in-stock-wrapper">
-        <label>Amount in stock</label>
-        <input id="field-amount-in-stock" type="number" step="1" min="0">
-      </div>
-      <div>
-        <label>MPN</label>
-        <input id="field-mpn" type="text">
-      </div>
-      <div>
-        <label>Brand</label>
-        <input id="field-brand" type="text">
-      </div>
-      <div>
-        <label>Category</label>
-        <div class="category-input-group">
-          <select id="field-category-select">
-            <option value="">-- Chọn danh mục --</option>
-          </select>
-          <span style="margin: 0 8px; color: #94a3b8;">hoặc</span>
-          <input id="field-category-new" type="text" placeholder="Nhập tên danh mục mới">
-        </div>
-        <input type="hidden" id="field-category-id" value="">
       </div>
     </div>
 
@@ -186,6 +147,6 @@
       });
   })();
 </script>
-<script src="products.js"></script>
+<script src="categories.js"></script>
 </body>
 </html>

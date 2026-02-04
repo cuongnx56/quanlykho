@@ -4,11 +4,16 @@
   <meta charset="UTF-8">
   <title>Cài đặt</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="sidebar.css">
   <link rel="stylesheet" href="settings.css">
   <link rel="stylesheet" href="loading.css">
   <link rel="stylesheet" href="navigation.css">
 </head>
 <body>
+
+<!-- Sidebar Navigation - Loaded from sidebar.html -->
+<div id="sidebar-container"></div>
+<button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-label="Toggle menu">☰</button>
 
 <header class="topbar">
   <div class="container">
@@ -39,33 +44,6 @@
     </div>
     <button id="btn-login">Đăng nhập</button>
   </section>
-
-  <div class="card-actions top-actions">
-    <a class="btn-secondary link-btn btn-large" href="/admin/products.html">
-      <span class="btn-icon">🧩</span>
-      <span class="btn-text">Sản phẩm</span>
-    </a>
-    <a class="btn-secondary link-btn btn-large" href="/admin/orders.html">
-      <span class="btn-icon">🛒</span>
-      <span class="btn-text">Đơn hàng</span>
-    </a>
-    <a class="btn-secondary link-btn btn-large" href="/admin/inventory.html">
-      <span class="btn-icon">📦</span>
-      <span class="btn-text">Quản lý kho</span>
-    </a>
-    <a class="btn-secondary link-btn btn-large" href="/admin/reports.html">
-      <span class="btn-icon">📊</span>
-      <span class="btn-text">Báo cáo</span>
-    </a>
-    <a class="btn-secondary link-btn btn-large" href="/admin/invoices.html">
-      <span class="btn-icon">🧾</span>
-      <span class="btn-text">Hóa đơn</span>
-    </a>
-    <a class="btn-secondary link-btn btn-large" href="/admin/inventory-check.html">
-      <span class="btn-icon">🔍</span>
-      <span class="btn-text">Kiểm tra tồn kho</span>
-    </a>
-  </div>
 
   <section class="card" id="settings-section" style="display: none;">
     <div class="card-header">
@@ -127,6 +105,34 @@
 <script src="loading.js"></script>
 <script src="cache.js"></script>
 <script src="worker-api.js"></script>
+<script>
+  // Load sidebar HTML from sidebar.html
+  (function() {
+    fetch('sidebar.html')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to load sidebar');
+        }
+        return response.text();
+      })
+      .then(html => {
+        document.getElementById('sidebar-container').innerHTML = html;
+        // Initialize sidebar after loading
+        const script = document.createElement('script');
+        script.src = 'sidebar.js';
+        script.onload = function() {
+          console.log('✅ Sidebar loaded and initialized');
+        };
+        document.body.appendChild(script);
+      })
+      .catch(err => {
+        console.error('❌ Error loading sidebar:', err);
+        // Fallback: show error message
+        document.getElementById('sidebar-container').innerHTML = 
+          '<div style="padding: 20px; color: #ef4444;">Error loading sidebar</div>';
+      });
+  })();
+</script>
 <script src="settings.js"></script>
 
 </body>
