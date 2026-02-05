@@ -154,7 +154,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   byId("btn-login")?.addEventListener("click", login);
-  byId("btn-logout")?.addEventListener("click", logout);
+  byId("btn-logout")?.addEventListener("click", () => {
+    resetSession();
+  });
 
   // Auto load if already logged in
   if (session.token) {

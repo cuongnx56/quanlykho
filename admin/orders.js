@@ -886,13 +886,23 @@ async function saveOrder() {
   // ✅ Reload session from localStorage to ensure token is up to date
   reloadSession();
   
+  // Clear previous validation errors
+  Validator.clearErrors();
+  
   const customerInput = byId("field-customer");
   const customerValue = customerInput.value.trim();
   const dateInput = byId("field-order-date");
   let orderDateTime = (dateInput && dateInput.value) ? String(dateInput.value).trim() : "";
   
-  if (!customerValue) {
-    alert("Vui lòng nhập tên khách hàng");
+  // Validate customer field (sử dụng constants mặc định)
+  const customerResult = Validator.validateField(customerValue, {
+    required: true,
+    minLength: 1,
+    maxLength: Validator.limits.STRING_MAX_LENGTH  // Max 50 ký tự (từ constants)
+  }, 'field-customer');
+  
+  if (!customerResult.valid) {
+    Validator.showError('field-customer', customerResult.error);
     return;
   }
   
@@ -984,16 +994,31 @@ async function saveOrder() {
     return;
   }
 
-  // Validate qty & price
-  for (const it of items) {
+  // Validate qty & price using Validator
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
     const qty = Number(it.qty);
     const price = Number(it.price);
-    if (!Number.isFinite(qty) || qty <= 0 || Math.floor(qty) !== qty) {
-      alert("Số lượng không hợp lệ (phải là số nguyên > 0).");
+    
+    // Validate quantity
+    const qtyResult = Validator.validateField(qty, {
+      required: true,
+      type: 'integer',
+      min: 1
+    });
+    if (!qtyResult.valid) {
+      alert(`Sản phẩm ${i + 1}: ${qtyResult.error}`);
       return;
     }
-    if (!Number.isFinite(price) || price < 0) {
-      alert("Giá không hợp lệ (phải là số >= 0).");
+    
+    // Validate price
+    const priceResult = Validator.validateField(price, {
+      required: true,
+      type: 'number',
+      nonNegative: true
+    });
+    if (!priceResult.valid) {
+      alert(`Sản phẩm ${i + 1}: ${priceResult.error}`);
       return;
     }
   }
@@ -1005,8 +1030,26 @@ async function saveOrder() {
   const shippingNote = byId("field-shipping-note")?.value.trim() || "";
   const orderNote = byId("field-order-note")?.value.trim() || "";
   
-  if (!shippingAddress) {
-    alert("Vui lòng nhập địa chỉ giao hàng");
+  // Validate shipping fields (sử dụng constants mặc định)
+  const shippingRules = {
+    "field-shipping-address": Validator.helpers.requiredString(1),  // Max 50 ký tự (từ constants)
+    "field-shipping-city": Validator.helpers.optionalString(),  // Max 50 ký tự (từ constants)
+    "field-shipping-zipcode": Validator.helpers.optionalString(),  // Max 50 ký tự (từ constants)
+    "field-shipping-note": Validator.helpers.textarea(false),  // Max 100 ký tự (từ constants)
+    "field-order-note": Validator.helpers.textarea(false)  // Max 100 ký tự (từ constants)
+  };
+  
+  const shippingData = {
+    "field-shipping-address": shippingAddress,
+    "field-shipping-city": shippingCity,
+    "field-shipping-zipcode": shippingZipcode,
+    "field-shipping-note": shippingNote,
+    "field-order-note": orderNote
+  };
+  
+  const shippingResult = Validator.validateForm(shippingData, shippingRules);
+  if (!shippingResult.valid) {
+    Validator.showErrors(shippingResult.errors);
     return;
   }
   
