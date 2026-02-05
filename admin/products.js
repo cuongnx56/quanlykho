@@ -12,8 +12,8 @@ let totalProducts = 0;
 const itemsPerPage = 50;
 
 // Image resize constants
-const IMAGE_MAX_WIDTH = 68;
-const IMAGE_MAX_HEIGHT = 86;
+const IMAGE_MAX_WIDTH = 20;
+const IMAGE_MAX_HEIGHT = 20;
 
 // Override resetSession to include page-specific cleanup
 function resetSession() {
@@ -423,9 +423,63 @@ async function saveProduct() {
   // ✅ Reload session from localStorage to ensure token is up to date
   reloadSession();
   
+  // Clear previous validation errors
+  Validator.clearErrors();
+  
   const data = readForm();
-  if (!data.id || !data.title || data.price === "") {
-    alert("ID, Title và Price là bắt buộc");
+  
+  // Define validation rules (sử dụng constants mặc định, có thể ghi đè)
+  const rules = {
+    id: Validator.helpers.requiredId(1),  // Max 15 ký tự (từ constants)
+    title: Validator.helpers.requiredString(2),  // Max 50 ký tự (từ constants)
+    price: Validator.helpers.requiredPositiveNumber(999999999),
+    description: Validator.helpers.textarea(false),  // Max 100 ký tự (từ constants)
+    availability: Validator.helpers.optionalString(),  // Max 50 ký tự (từ constants)
+    "image link": {
+      required: false,
+      type: 'url',
+      maxLength: 150  // Override limit lên 150 ký tự
+    },
+    "import_price": {
+      required: false,
+      type: 'number',
+      min: 0,
+      max: 999999999
+    },
+    mpn: Validator.helpers.optionalString(),  // Max 50 ký tự (từ constants)
+    brand: Validator.helpers.optionalString()  // Max 50 ký tự (từ constants)
+  };
+  
+  // Only validate amount_in_stock when creating
+  if (editMode === "create") {
+    rules["amount_in_stock"] = Validator.helpers.requiredNonNegativeNumber(999999);
+  }
+  
+  // Validate form
+  const result = Validator.validateForm(data, rules);
+  if (!result.valid) {
+    // Map field names to input IDs (field names in data vs input IDs in HTML)
+    const fieldIdMap = {
+      'id': 'field-id',
+      'title': 'field-title',
+      'description': 'field-description',
+      'availability': 'field-availability',
+      'image link': 'field-image-link',
+      'import_price': 'field-import-price',
+      'price': 'field-price',
+      'amount_in_stock': 'field-amount-in-stock',
+      'mpn': 'field-mpn',
+      'brand': 'field-brand'
+    };
+    
+    // Map errors to use correct input IDs
+    const mappedErrors = {};
+    for (const fieldName in result.errors) {
+      const inputId = fieldIdMap[fieldName] || fieldName;
+      mappedErrors[inputId] = result.errors[fieldName];
+    }
+    
+    Validator.showErrors(mappedErrors);
     return;
   }
 
@@ -475,16 +529,21 @@ async function saveProduct() {
     }
   }
 
+  // Convert number fields after validation
+  data.price = Number(data.price);
+  if (data["import_price"]) {
+    data["import_price"] = Number(data["import_price"]);
+  }
+  if (data["amount_in_stock"]) {
+    data["amount_in_stock"] = Number(data["amount_in_stock"]);
+  }
+
   let savedProduct;
   try {
     if (editMode === "create") {
       data.token = session.token;
       savedProduct = await apiCall("products.create", data);
     } else {
-      if (!data.id) {
-        alert("Thiếu ID sản phẩm");
-        return;
-      }
       data.token = session.token;
       savedProduct = await apiCall("products.update", data);
     }

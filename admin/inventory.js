@@ -291,6 +291,9 @@ async function createMovement() {
   // ✅ Reload session from localStorage to ensure token is up to date
   reloadSession();
   
+  // Clear previous validation errors
+  Validator.clearErrors();
+  
   if (!session.token) {
     alert("Vui lòng đăng nhập trước");
     return;
@@ -301,9 +304,49 @@ async function createMovement() {
   const qty = byId("qty").value;
   const unitPrice = byId("unit_price").value;
   const note = byId("note").value.trim();
-
-  if (!productId || !qty) {
-    alert("Vui lòng chọn sản phẩm và nhập số lượng");
+  
+  // Define validation rules (sử dụng constants mặc định)
+  const rules = {
+    product_id: { required: true },
+    movement_type: { required: true },
+    qty: Validator.helpers.requiredPositiveNumber(999999),
+    unit_price: {
+      required: false,
+      type: 'number',
+      nonNegative: true,
+      max: 999999999
+    },
+    note: Validator.helpers.textarea(false)  // Max 100 ký tự (từ constants)
+  };
+  
+  // Validate form
+  const data = {
+    product_id: productId,
+    movement_type: type,
+    qty: qty,
+    unit_price: unitPrice,
+    note: note
+  };
+  
+  const result = Validator.validateForm(data, rules);
+  if (!result.valid) {
+    // Map field names to actual input IDs
+    const fieldMap = {
+      'product_id': 'product_id',
+      'movement_type': 'movement_type',
+      'qty': 'qty',
+      'unit_price': 'unit_price',
+      'note': 'note'
+    };
+    
+    const mappedErrors = {};
+    for (const field in result.errors) {
+      if (fieldMap[field]) {
+        mappedErrors[fieldMap[field]] = result.errors[field];
+      }
+    }
+    
+    Validator.showErrors(mappedErrors);
     return;
   }
 

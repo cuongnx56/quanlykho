@@ -373,9 +373,38 @@ async function saveCategory() {
   // ✅ Reload session from localStorage to ensure token is up to date
   reloadSession();
   
+  // Clear previous validation errors
+  Validator.clearErrors();
+  
   const data = readForm();
-  if (!data.id || !data.name) {
-    alert("ID và Name là bắt buộc");
+  
+  // Define validation rules (sử dụng constants mặc định)
+  const rules = {
+    id: Validator.helpers.requiredId(1),  // Max 15 ký tự (từ constants)
+    name: Validator.helpers.requiredString(2),  // Max 50 ký tự (từ constants)
+    description: Validator.helpers.textarea(false),  // Max 100 ký tự (từ constants)
+    "image link": Validator.helpers.optionalUrl()
+  };
+  
+  // Validate form
+  const result = Validator.validateForm(data, rules);
+  if (!result.valid) {
+    // Map field names to input IDs
+    const fieldIdMap = {
+      'id': 'field-id',
+      'name': 'field-name',
+      'description': 'field-description',
+      'image link': 'field-image-link'
+    };
+    
+    // Map errors to use correct input IDs
+    const mappedErrors = {};
+    for (const fieldName in result.errors) {
+      const inputId = fieldIdMap[fieldName] || fieldName;
+      mappedErrors[inputId] = result.errors[fieldName];
+    }
+    
+    Validator.showErrors(mappedErrors);
     return;
   }
 
@@ -564,35 +593,55 @@ byId("btn-logout").addEventListener("click", () => {
   resetSession();
 });
 
-// Image upload handlers
-byId("btn-upload-image").addEventListener("click", () => {
-  byId("file-image-upload").click();
-});
+// Image upload handlers - Tạm thời comment lại vì không cần upload ảnh
+/*
+// ✅ Check if btn-upload-image exists before adding event listener (may be commented out in HTML)
+const btnUploadImage = byId("btn-upload-image");
+if (btnUploadImage) {
+  btnUploadImage.addEventListener("click", () => {
+    const fileUpload = byId("file-image-upload");
+    if (fileUpload) {
+      fileUpload.click();
+    }
+  });
+}
 
-byId("file-image-upload").addEventListener("change", async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  
-  if (!file.type.startsWith('image/')) {
-    alert('Vui lòng chọn file ảnh');
-    return;
-  }
-  
-  try {
-    const base64 = await resizeAndConvertToBase64(file, IMAGE_MAX_WIDTH, IMAGE_MAX_HEIGHT);
-    byId("field-image-link").value = base64;
-    showImagePreview(base64);
-  } catch (error) {
-    console.error('Error processing image:', error);
-    alert('Lỗi khi xử lý ảnh: ' + error.message);
-  }
-});
+// ✅ Check if file-image-upload exists before adding event listener (may be commented out in HTML)
+const fileImageUpload = byId("file-image-upload");
+if (fileImageUpload) {
+  fileImageUpload.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/')) {
+      alert('Vui lòng chọn file ảnh');
+      return;
+    }
+    
+    try {
+      const base64 = await resizeAndConvertToBase64(file, IMAGE_MAX_WIDTH, IMAGE_MAX_HEIGHT);
+      byId("field-image-link").value = base64;
+      showImagePreview(base64);
+    } catch (error) {
+      console.error('Error processing image:', error);
+      alert('Lỗi khi xử lý ảnh: ' + error.message);
+    }
+  });
+}
 
-byId("btn-remove-image").addEventListener("click", () => {
-  byId("field-image-link").value = "";
-  hideImagePreview();
-  byId("file-image-upload").value = "";
-});
+// ✅ Check if btn-remove-image exists before adding event listener (may be commented out in HTML)
+const btnRemoveImage = byId("btn-remove-image");
+if (btnRemoveImage) {
+  btnRemoveImage.addEventListener("click", () => {
+    byId("field-image-link").value = "";
+    hideImagePreview();
+    const fileUpload = byId("file-image-upload");
+    if (fileUpload) {
+      fileUpload.value = "";
+    }
+  });
+}
+*/
 
 // Listen to image link input changes
 byId("field-image-link").addEventListener("input", (e) => {
@@ -673,6 +722,11 @@ function showImagePreview(imageSrc) {
   const preview = byId("image-preview");
   const previewImg = byId("image-preview-img");
   
+  // ✅ Check if elements exist (they may be commented out in HTML)
+  if (!preview || !previewImg) {
+    return; // Elements don't exist, skip preview
+  }
+  
   if (imageSrc) {
     previewImg.src = imageSrc;
     preview.style.display = 'block';
@@ -686,7 +740,9 @@ function showImagePreview(imageSrc) {
  */
 function hideImagePreview() {
   const preview = byId("image-preview");
-  preview.style.display = 'none';
+  if (preview) {
+    preview.style.display = 'none';
+  }
 }
 
 /**
