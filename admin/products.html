@@ -109,6 +109,7 @@
           <button type="button" id="btn-upload-image" class="btn-upload">📷 Upload ảnh</button>
           <input type="file" id="file-image-upload" accept="image/*" style="display: none;">
         </div>
+        <a href="#" id="image-link-help" class="help-link">ℹ️ Hướng dẫn sử dụng Image Link</a>
         <div id="image-preview" class="image-preview" style="display: none;">
           <img id="image-preview-img" src="" alt="Preview">
           <button type="button" id="btn-remove-image" class="btn-remove-image">✕</button>
@@ -149,6 +150,79 @@
 
     <div class="modal-actions">
       <button id="btn-save" class="btn-primary">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- Image Link Help Modal -->
+<div id="image-link-help-modal" class="modal">
+  <div class="modal-content modal-help">
+    <div class="modal-header">
+      <h3>📷 Hướng dẫn Image Link</h3>
+      <button id="btn-close-help" class="btn-close">×</button>
+    </div>
+    <div class="help-content">
+      <div class="help-section">
+        <h4>🎯 Có 2 cách để thêm ảnh sản phẩm:</h4>
+        <div class="help-option">
+          <div class="help-option-title">1️⃣ Nhập link ảnh có sẵn</div>
+          <p>Nếu bạn đã có link ảnh từ nguồn khác (ví dụ: CDN, website khác), chỉ cần dán link vào ô <strong>Image link</strong>.</p>
+          <div class="help-example">
+            <strong>Ví dụ:</strong> <code>https://example.com/image.jpg</code>
+          </div>
+        </div>
+        <div class="help-option">
+          <div class="help-option-title">2️⃣ Upload ảnh lên GitHub</div>
+          <p>Bấm nút <strong>📷 Upload ảnh</strong> để tải ảnh từ máy tính lên GitHub. Link sẽ tự động được điền vào ô Image link.</p>
+          <div class="help-note">
+            <strong>⚠️ Lưu ý:</strong> Để sử dụng tính năng upload, bạn cần cấu hình GitHub trong <strong>Settings</strong> trước.
+          </div>
+        </div>
+      </div>
+      
+      <div class="help-section">
+        <h4>⚙️ Cấu hình GitHub trong Settings:</h4>
+        <ol class="help-steps">
+          <li>Vào menu <strong>Settings</strong> (Cài đặt)</li>
+          <li>Điền các thông tin sau:
+            <ul>
+              <li><strong>GitHub Owner:</strong> Tên tài khoản GitHub của bạn</li>
+              <li><strong>GitHub Repo:</strong> Tên repository để lưu ảnh (ví dụ: <code>product-images</code>)</li>
+              <li><strong>GitHub Branch:</strong> Nhánh repository (thường là <code>main</code>)</li>
+              <li><strong>GitHub Token:</strong> Personal Access Token từ GitHub</li>
+            </ul>
+          </li>
+          <li>Bấm <strong>Lưu cài đặt</strong></li>
+        </ol>
+      </div>
+      
+      <div class="help-section">
+        <h4>🔑 Tạo GitHub Token:</h4>
+        <ol class="help-steps">
+          <li>Vào <a href="https://github.com/settings/tokens" target="_blank">GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)</a></li>
+          <li>Bấm <strong>Generate new token (classic)</strong></li>
+          <li>Chọn các quyền (scopes):
+            <ul>
+              <li><strong>✅ repo</strong> - Full control of private repositories (hoặc <strong>public_repo</strong> nếu dùng public repo)</li>
+            </ul>
+          </li>
+          <li>Bấm <strong>Generate token</strong> và copy token</li>
+          <li>Dán token vào ô <strong>GitHub Token</strong> trong Settings</li>
+        </ol>
+      </div>
+      
+      <div class="help-section">
+        <h4>💡 Mẹo:</h4>
+        <ul class="help-tips">
+          <li>Kích thước ảnh tối đa: <strong>5MB</strong></li>
+          <li>Định dạng hỗ trợ: JPG, PNG, GIF, WebP</li>
+          <li>Sau khi upload, ảnh sẽ được lưu trên GitHub và hiển thị qua CDN jsDelivr</li>
+          <li>Bạn có thể xem preview ảnh ngay sau khi nhập link hoặc upload</li>
+        </ul>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button id="btn-close-help-footer" class="btn-primary">Đã hiểu</button>
     </div>
   </div>
 </div>

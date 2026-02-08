@@ -124,6 +124,15 @@ function populateForm(settings) {
   byId("shop_email").value = settings.shop_email || "";
   byId("shop_tax_code").value = settings.shop_tax_code || "";
   byId("currency").value = settings.currency || "VND";
+  
+  // GitHub config
+  byId("github_owner").value = settings.github_owner || "";
+  byId("github_repo").value = settings.github_repo || "";
+  byId("github_branch").value = settings.github_branch || "main";
+  byId("github_token").value = settings.github_token || "";
+  
+  // Store in window for access from other pages
+  window.currentSettings = settings;
 }
 
 async function saveSettings() {
@@ -142,7 +151,12 @@ async function saveSettings() {
       shop_phone: byId("shop_phone").value.trim(),
       shop_email: byId("shop_email").value.trim(),
       shop_tax_code: byId("shop_tax_code").value.trim(),
-      currency: byId("currency").value
+      currency: byId("currency").value,
+      // GitHub config
+      github_owner: byId("github_owner").value.trim(),
+      github_repo: byId("github_repo").value.trim(),
+      github_branch: byId("github_branch").value.trim() || "main",
+      github_token: byId("github_token").value.trim()
     };
     
     // Validate required fields

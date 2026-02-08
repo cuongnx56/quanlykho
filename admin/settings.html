@@ -92,6 +92,40 @@
         <small>Đơn vị tiền tệ mặc định</small>
       </div>
 
+      <div class="form-group" style="margin-top: 2rem; padding-top: 2rem; border-top: 2px solid #e5e7eb;">
+        <h3 style="margin-bottom: 1rem;">📸 Cấu hình Upload Ảnh (GitHub)</h3>
+        <p style="color: #6b7280; margin-bottom: 1.5rem; font-size: 0.9rem;">
+          Cấu hình GitHub để upload ảnh sản phẩm. Tạo GitHub Personal Access Token với quyền <code>repo</code>.
+        </p>
+      </div>
+
+      <div class="form-group">
+        <label for="github_owner">GitHub Owner (Username) *</label>
+        <input type="text" id="github_owner" name="github_owner" placeholder="VD: nguyenxuancuongk56">
+        <small>Tên người dùng GitHub của bạn</small>
+      </div>
+
+      <div class="form-group">
+        <label for="github_repo">GitHub Repository *</label>
+        <input type="text" id="github_repo" name="github_repo" placeholder="VD: product-images">
+        <small>Tên repository GitHub để lưu ảnh (phải là public repository)</small>
+      </div>
+
+      <div class="form-group">
+        <label for="github_branch">GitHub Branch</label>
+        <input type="text" id="github_branch" name="github_branch" placeholder="main" value="main">
+        <small>Branch mặc định: main</small>
+      </div>
+
+      <div class="form-group">
+        <label for="github_token">GitHub Personal Access Token *</label>
+        <input type="password" id="github_token" name="github_token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+        <small>
+          Token với quyền <code>repo</code>. 
+          <a href="https://github.com/settings/tokens" target="_blank" style="color: #3b82f6;">Tạo token tại đây</a>
+        </small>
+      </div>
+
       <div class="form-actions">
         <button type="submit" class="btn-primary" id="btn-save">💾 Lưu cài đặt</button>
         <button type="button" class="btn-secondary" id="btn-cancel">Hủy</button>

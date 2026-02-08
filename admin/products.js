@@ -36,6 +36,14 @@ function closeModal() {
   byId("product-modal").classList.remove("active");
 }
 
+function openHelpModal() {
+  byId("image-link-help-modal").classList.add("active");
+}
+
+function closeHelpModal() {
+  byId("image-link-help-modal").classList.remove("active");
+}
+
 function clearForm() {
   byId("field-id").value = "";
   byId("field-title").value = "";
@@ -726,13 +734,139 @@ byId("file-image-upload").addEventListener("change", async (e) => {
     return;
   }
   
+  // Validate file size (max 5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    alert('Kích thước ảnh phải nhỏ hơn 5MB');
+    byId("file-image-upload").value = "";
+    return;
+  }
+  
+  // Get GitHub config from settings
+  let githubConfig = null;
+  let settingsError = null;
+  
   try {
-    const base64 = await resizeAndConvertToBase64(file, IMAGE_MAX_WIDTH, IMAGE_MAX_HEIGHT);
-    byId("field-image-link").value = base64;
-    showImagePreview(base64);
-  } catch (error) {
-    console.error('Error processing image:', error);
-    alert('Lỗi khi xử lý ảnh: ' + error.message);
+    // Reload session to ensure token is available
+    reloadSession();
+    
+    if (!session.token || !session.apiKey) {
+      settingsError = "Vui lòng đăng nhập trước khi upload ảnh";
+    } else {
+      // Try to get from window.currentSettings (if settings page was loaded)
+      if (window.currentSettings && window.currentSettings.github_token) {
+        githubConfig = {
+          owner: window.currentSettings.github_owner || '',
+          repo: window.currentSettings.github_repo || '',
+          branch: window.currentSettings.github_branch || 'main',
+          token: window.currentSettings.github_token || ''
+        };
+      }
+      
+      // If not available, try to load settings
+      if (!githubConfig || !githubConfig.token || !githubConfig.owner || !githubConfig.repo) {
+        const settings = await apiCall("settings.list", {
+          token: session.token
+        });
+        
+        githubConfig = {
+          owner: settings.github_owner || '',
+          repo: settings.github_repo || '',
+          branch: settings.github_branch || 'main',
+          token: settings.github_token || ''
+        };
+        
+        // Cache for next time
+        window.currentSettings = settings;
+      }
+    }
+  } catch (err) {
+    console.error("Error loading settings:", err);
+    settingsError = err.message;
+    
+    // If token expired, show specific message
+    if (err.message && (err.message.includes("Token expired") || err.message.includes("Unauthorized") || err.message.includes("hết hạn"))) {
+      settingsError = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
+    }
+  }
+  
+  // Validate GitHub config
+  if (settingsError) {
+    alert('❌ ' + settingsError);
+    byId("file-image-upload").value = "";
+    return;
+  }
+  
+  if (!githubConfig || !githubConfig.token || !githubConfig.owner || !githubConfig.repo) {
+    alert('⚠️ Vui lòng cấu hình GitHub trong Settings trước khi upload ảnh:\n- GitHub Owner\n- GitHub Repo\n- GitHub Token\n\nVào Settings → Điền thông tin GitHub → Lưu cài đặt');
+    byId("file-image-upload").value = "";
+    return;
+  }
+  
+  // Show loading spinner
+  const btnUpload = byId("btn-upload-image");
+  const originalHTML = btnUpload.innerHTML;
+  btnUpload.disabled = true;
+  btnUpload.innerHTML = '<span class="spinner-small"></span> Đang upload...';
+  
+  try {
+    // Show preview immediately (local)
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      showImagePreview(e.target.result);
+    };
+    reader.readAsDataURL(file);
+    
+    // Upload to GitHub via Cloudflare Worker with GitHub config
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('github_owner', githubConfig.owner);
+    formData.append('github_repo', githubConfig.repo);
+    formData.append('github_branch', githubConfig.branch);
+    formData.append('github_token', githubConfig.token);
+    
+    const workerUrl = window.CommonUtils?.WORKER_URL || "https://quanlykho-api.nguyenxuancuongk56.workers.dev";
+    const response = await fetch(`${workerUrl}/upload-image`, {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ 
+        error: `Upload failed (${response.status} ${response.statusText})`,
+        message: 'Failed to parse error response'
+      }));
+      const errorMessage = errorData.error || errorData.message || `Upload failed (${response.status})`;
+      throw new Error(errorMessage);
+    }
+    
+    const result = await response.json();
+    if (!result.success) {
+      const errorMessage = result.error || result.message || 'Upload failed';
+      throw new Error(errorMessage);
+    }
+    
+    // ✅ Auto-fill image link and show preview (no alert needed)
+    byId("field-image-link").value = result.url;
+    showImagePreview(result.url);
+    
+    // Show success indicator briefly
+    btnUpload.innerHTML = '✅ Hoàn thành';
+    btnUpload.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+    setTimeout(() => {
+      btnUpload.innerHTML = originalHTML;
+      btnUpload.style.background = '';
+    }, 1500);
+    
+  } catch (err) {
+    // Show error (still need alert for errors)
+    alert("❌ Lỗi upload ảnh: " + err.message);
+    console.error("Upload error:", err);
+    hideImagePreview();
+    byId("field-image-link").value = "";
+    btnUpload.innerHTML = originalHTML;
+  } finally {
+    btnUpload.disabled = false;
+    byId("file-image-upload").value = "";
   }
 });
 
@@ -945,6 +1079,27 @@ byId("field-category-new").addEventListener("input", (e) => {
   if (value) {
     byId("field-category-select").value = ""; // Clear select
     byId("field-category-id").value = ""; // Clear hidden field
+  }
+});
+
+// Image Link Help Modal
+byId("image-link-help").addEventListener("click", (e) => {
+  e.preventDefault();
+  openHelpModal();
+});
+
+byId("btn-close-help").addEventListener("click", () => {
+  closeHelpModal();
+});
+
+byId("btn-close-help-footer").addEventListener("click", () => {
+  closeHelpModal();
+});
+
+// Close help modal when clicking outside
+byId("image-link-help-modal").addEventListener("click", (e) => {
+  if (e.target.id === "image-link-help-modal") {
+    closeHelpModal();
   }
 });
 
