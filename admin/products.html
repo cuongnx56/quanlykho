@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="pagination.css">
   <link rel="stylesheet" href="navigation.css">
   <link rel="stylesheet" href="validation.css">
+  <link rel="stylesheet" href="cache-notice.css">
 </head>
 <body>
 
@@ -26,6 +27,9 @@
     </div>
   </div>
 </header>
+
+<!-- Cache Notice - Loaded from cache-notice.html -->
+<div id="cache-notice-container" class="container"></div>
 
 <main class="container">
   <section class="card" id="login-section">
@@ -148,6 +152,23 @@
       </div>
     </div>
 
+    <!-- Product Detail Section - Full Width -->
+    <div class="detail-section-full">
+      <label>Product Detail (HTML)</label>
+      <div class="detail-input-group">
+        <textarea id="field-detail" rows="8" placeholder="Nhập HTML chi tiết sản phẩm..."></textarea>
+        <div class="detail-actions">
+          <button type="button" id="btn-save-detail" class="btn-save-detail">💾 Lưu Detail lên GitHub</button>
+          <button type="button" id="btn-load-detail" class="btn-load-detail" style="display: none;">📥 Load từ URL</button>
+        </div>
+      </div>
+      <div class="detail-url-group">
+        <label style="font-size: 12px; color: #64748b; margin-top: 8px;">Detail URL (tự động điền sau khi lưu)</label>
+        <input id="field-detail-url" type="text" placeholder="https://cdn.jsdelivr.net/gh/..." readonly style="background: #f8fafc;">
+      </div>
+      <div id="detail-status" class="detail-status" style="display: none;"></div>
+    </div>
+
     <div class="modal-actions">
       <button id="btn-save" class="btn-primary">Lưu</button>
     </div>
@@ -259,6 +280,31 @@
         // Fallback: show error message
         document.getElementById('sidebar-container').innerHTML = 
           '<div style="padding: 20px; color: #ef4444;">Error loading sidebar</div>';
+      });
+  })();
+
+  // Load cache notice HTML from cache-notice.html
+  (function() {
+    fetch('cache-notice.html')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to load cache notice');
+        }
+        return response.text();
+      })
+      .then(html => {
+        document.getElementById('cache-notice-container').innerHTML = html;
+        // Initialize cache notice after loading
+        const script = document.createElement('script');
+        script.src = 'cache-notice.js';
+        script.onload = function() {
+          console.log('✅ Cache notice loaded and initialized');
+        };
+        document.body.appendChild(script);
+      })
+      .catch(err => {
+        console.error('❌ Error loading cache notice:', err);
+        // Don't show error, just log it (cache notice is not critical)
       });
   })();
 </script>

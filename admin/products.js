@@ -56,6 +56,10 @@ function clearForm() {
   byId("field-mpn").value = "";
   byId("field-brand").value = "";
   byId("field-category-select").value = "";
+  byId("field-detail").value = "";
+  byId("field-detail-url").value = "";
+  hideDetailStatus();
+  byId("btn-load-detail").style.display = "none";
   byId("field-category-new").value = "";
   byId("field-category-id").value = "";
   // Clear image preview
@@ -74,6 +78,12 @@ function readForm() {
     mpn: byId("field-mpn").value.trim(),
     brand: byId("field-brand").value.trim()
   };
+  
+  // Include detail_url if exists
+  const detailUrl = byId("field-detail-url").value.trim();
+  if (detailUrl) {
+    data["detail_url"] = detailUrl;
+  }
   
   // Handle category_id
   var categoryId = byId("field-category-id").value.trim();
@@ -97,6 +107,35 @@ function readForm() {
   return data;
 }
 
+async function loadDetailFromUrl(detailUrl) {
+  if (!detailUrl || !detailUrl.trim()) {
+    return;
+  }
+  
+  try {
+    showDetailStatus("⏳ Đang tải detail từ URL...", "info");
+    const response = await fetch(detailUrl.trim());
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const html = await response.text();
+    byId("field-detail").value = html;
+    showDetailStatus("✅ Đã tải detail thành công!", "success");
+    
+    setTimeout(() => {
+      hideDetailStatus();
+    }, 2000);
+  } catch (err) {
+    console.error("Load detail error:", err);
+    showDetailStatus("⚠️ Không thể tải detail: " + err.message, "error");
+    // Don't show alert, just show status message
+    setTimeout(() => {
+      hideDetailStatus();
+    }, 3000);
+  }
+}
+
 function fillForm(product) {
   byId("field-id").value = product.id || "";
   byId("field-title").value = product.title || product.name || "";
@@ -108,6 +147,21 @@ function fillForm(product) {
   byId("field-amount-in-stock").value = product.amount_in_stock || "";
   byId("field-mpn").value = product.mpn || "";
   byId("field-brand").value = product.brand || "";
+  
+  // Load detail URL if exists
+  const detailUrl = product["detail_url"] || product.detail_url || "";
+  byId("field-detail-url").value = detailUrl;
+  
+  // Show load button if detail URL exists
+  if (detailUrl) {
+    byId("btn-load-detail").style.display = "inline-block";
+    // ✅ Tự động load detail từ URL khi có detail_url
+    loadDetailFromUrl(detailUrl);
+  } else {
+    byId("btn-load-detail").style.display = "none";
+    // Clear detail content if no URL
+    byId("field-detail").value = "";
+  }
   
   // Handle category_id
   const categoryId = product.category_id || "";
@@ -1081,6 +1135,171 @@ byId("field-category-new").addEventListener("input", (e) => {
     byId("field-category-id").value = ""; // Clear hidden field
   }
 });
+
+// Product Detail Upload
+byId("btn-save-detail").addEventListener("click", async () => {
+  const btnSave = byId("btn-save-detail");
+  const productId = byId("field-id").value;
+  const detailHtml = byId("field-detail").value.trim();
+  
+  if (!detailHtml) {
+    alert("⚠️ Vui lòng nhập nội dung Product Detail trước khi lưu!");
+    return;
+  }
+  
+  if (!productId) {
+    alert("⚠️ Vui lòng lưu sản phẩm trước (có ID) để upload detail!");
+    return;
+  }
+  
+  // Get GitHub config from settings (same pattern as image upload)
+  let githubConfig = null;
+  let settingsError = null;
+  
+  try {
+    // Reload session to ensure token is available
+    reloadSession();
+    
+    if (!session.token || !session.apiKey) {
+      settingsError = "Vui lòng đăng nhập trước khi upload detail";
+    } else {
+      // Try to get from window.currentSettings (if settings page was loaded)
+      if (window.currentSettings && window.currentSettings.github_token) {
+        githubConfig = {
+          owner: window.currentSettings.github_owner || '',
+          repo: window.currentSettings.github_repo || '',
+          branch: window.currentSettings.github_branch || 'main',
+          token: window.currentSettings.github_token || ''
+        };
+      }
+      
+      // If not available, try to load settings
+      if (!githubConfig || !githubConfig.token || !githubConfig.owner || !githubConfig.repo) {
+        const settings = await apiCall("settings.list", {
+          token: session.token
+        });
+        
+        githubConfig = {
+          owner: settings.github_owner || '',
+          repo: settings.github_repo || '',
+          branch: settings.github_branch || 'main',
+          token: settings.github_token || ''
+        };
+        
+        // Cache for next time
+        window.currentSettings = settings;
+      }
+    }
+  } catch (err) {
+    console.error("Error loading settings:", err);
+    settingsError = err.message;
+  }
+  
+  // Validate GitHub config
+  if (settingsError || !githubConfig || !githubConfig.token || !githubConfig.owner || !githubConfig.repo) {
+    alert('⚠️ Vui lòng cấu hình GitHub trong Settings trước khi upload detail:\n- GitHub Owner\n- GitHub Repo\n- GitHub Token' + (settingsError ? `\n\nLỗi: ${settingsError}` : ''));
+    return;
+  }
+  
+  const originalText = btnSave.textContent;
+  btnSave.disabled = true;
+  btnSave.textContent = "⏳ Đang lưu...";
+  showDetailStatus("⏳ Đang upload detail lên GitHub...", "info");
+  
+  try {
+    const formData = new FormData();
+    formData.append('html', detailHtml);
+    formData.append('product_id', productId);
+    formData.append('github_owner', githubConfig.owner);
+    formData.append('github_repo', githubConfig.repo);
+    formData.append('github_branch', githubConfig.branch);
+    formData.append('github_token', githubConfig.token);
+    
+    const workerUrl = window.CommonUtils?.WORKER_URL || "https://quanlykho-api.nguyenxuancuongk56.workers.dev";
+    const response = await fetch(`${workerUrl}/upload-product-detail`, {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Upload failed' }));
+      throw new Error(errorData.error || `HTTP ${response.status}`);
+    }
+    
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error || 'Upload failed');
+    }
+    
+    // Auto-fill detail URL
+    byId("field-detail-url").value = result.url;
+    showDetailStatus("✅ Đã lưu detail lên GitHub thành công!", "success");
+    byId("btn-load-detail").style.display = "inline-block";
+    
+    // Reset button after 2 seconds
+    setTimeout(() => {
+      btnSave.textContent = originalText;
+      hideDetailStatus();
+    }, 2000);
+    
+  } catch (err) {
+    alert("❌ Lỗi upload detail: " + err.message);
+    console.error("Upload detail error:", err);
+    showDetailStatus("❌ Lỗi: " + err.message, "error");
+  } finally {
+    btnSave.disabled = false;
+  }
+});
+
+// Load Detail from URL
+byId("btn-load-detail").addEventListener("click", async () => {
+  const detailUrl = byId("field-detail-url").value.trim();
+  
+  if (!detailUrl) {
+    alert("⚠️ Không có Detail URL để load!");
+    return;
+  }
+  
+  const btnLoad = byId("btn-load-detail");
+  const originalText = btnLoad.textContent;
+  btnLoad.disabled = true;
+  btnLoad.textContent = "⏳ Đang tải...";
+  showDetailStatus("⏳ Đang tải detail từ GitHub...", "info");
+  
+  try {
+    const response = await fetch(detailUrl);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const html = await response.text();
+    byId("field-detail").value = html;
+    showDetailStatus("✅ Đã tải detail thành công!", "success");
+    
+    setTimeout(() => {
+      hideDetailStatus();
+    }, 2000);
+    
+  } catch (err) {
+    alert("❌ Lỗi load detail: " + err.message);
+    console.error("Load detail error:", err);
+    showDetailStatus("❌ Lỗi: " + err.message, "error");
+  } finally {
+    btnLoad.disabled = false;
+    btnLoad.textContent = originalText;
+  }
+});
+
+function showDetailStatus(message, type) {
+  const statusEl = byId("detail-status");
+  statusEl.textContent = message;
+  statusEl.style.display = "block";
+  statusEl.className = `detail-status detail-status-${type}`;
+}
+
+function hideDetailStatus() {
+  byId("detail-status").style.display = "none";
+}
 
 // Image Link Help Modal
 byId("image-link-help").addEventListener("click", (e) => {
