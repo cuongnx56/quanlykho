@@ -8,7 +8,17 @@ let movements = [];
 let currentPage = 1;
 let totalPages = 0;
 let totalMovements = 0;
-const itemsPerPage = 50;
+const itemsPerPage = 20; // ✅ Match backend limit (max 20)
+
+// Summary pagination variables
+let currentSummaryPage = 1;
+let totalSummaryPages = 0;
+let totalSummaryItems = 0;
+const summaryItemsPerPage = 20; // ✅ Match backend limit (max 20)
+
+// Product IDs index cache for search
+let productIdsIndex = [];
+let productSearchInitialized = false;
 
 // Override resetSession to include page-specific cleanup
 function resetSession() {
@@ -19,6 +29,11 @@ function resetSession() {
   // Page-specific cleanup
   summary = [];
   movements = [];
+  currentSummaryPage = 1;
+  totalSummaryPages = 0;
+  totalSummaryItems = 0;
+  productIdsIndex = [];
+  productSearchInitialized = false;
   renderSummary();
   renderMovements();
 }
@@ -62,17 +77,101 @@ async function loadData(page) {
   
   currentPage = page;
   
+  // Show loading state for movements table
+  const movementsTbody = byId("movements-table")?.querySelector("tbody");
+  if (movementsTbody) {
+    movementsTbody.innerHTML = `<tr><td colspan="7" class="muted" style="text-align: center;">⏳ Đang tải dữ liệu...</td></tr>`;
+  }
+  
+  // Show loading state for summary table
+  const summaryTbody = byId("summary-table")?.querySelector("tbody");
+  if (summaryTbody) {
+    summaryTbody.innerHTML = `<tr><td colspan="3" class="muted" style="text-align: center;">⏳ Đang tải dữ liệu...</td></tr>`;
+  }
+  
   return apiCallWithLoading(async () => {
-    // Check cache for summary
-    const summaryCacheKey = CacheManager.key("inventory", "summary");
-    const cachedSummary = CacheManager.get(summaryCacheKey);
+    // ✅ Use page parameter for cache key (not currentSummaryPage which might be stale)
+    const summaryPage = currentSummaryPage || 1;
+    const summaryCacheKey = CacheManager.key("inventory", "summary", summaryPage);
+    const cachedSummaryResult = CacheManager.get(summaryCacheKey);
     
-    if (cachedSummary) {
+    if (cachedSummaryResult) {
       console.log("📦 Using cached inventory summary");
-      summary = cachedSummary;
+      // Handle both old format (array) and new format (pagination object)
+      if (Array.isArray(cachedSummaryResult)) {
+        summary = cachedSummaryResult;
+        totalSummaryItems = cachedSummaryResult.length;
+        totalSummaryPages = 1;
+      } else {
+        summary = cachedSummaryResult.items || [];
+        totalSummaryItems = cachedSummaryResult.total || 0;
+        totalSummaryPages = cachedSummaryResult.totalPages || 1;
+        currentSummaryPage = cachedSummaryResult.page || 1;
+      }
     } else {
-      summary = await apiCall("inventory.summary");
-      CacheManager.set(summaryCacheKey, summary);
+      // ✅ Step 1: Try Cloudflare Worker first (use products API since summary is list products)
+      let productsResult = null;
+      
+      if (WorkerAPI && WorkerAPI.isConfigured()) {
+        try {
+          console.log("🚀 Trying Cloudflare Worker for inventory.summary (using products API)...");
+          productsResult = await WorkerAPI.productsList({
+            page: summaryPage,
+            limit: summaryItemsPerPage
+          });
+          
+          if (productsResult) {
+            console.log("✅ Worker cache HIT! Loaded from KV");
+          } else {
+            console.log("⚠️ Worker cache MISS, falling back to GAS");
+          }
+        } catch (error) {
+          console.error("⚠️ Worker error:", error);
+          console.log("Falling back to GAS...");
+        }
+      }
+      
+      // ✅ Step 2: Fallback to GAS if Worker fails or cache miss
+      if (!productsResult) {
+        console.log("📡 Fetching from GAS /exec endpoint...");
+        productsResult = await apiCall("inventory.summary", {
+          page: summaryPage,
+          limit: summaryItemsPerPage
+        });
+      }
+      
+      // Map products to summary format (id, title, amount_in_stock, price)
+      let summaryResult;
+      if (Array.isArray(productsResult)) {
+        summary = productsResult.map(p => ({
+          id: p.id || "",
+          title: p.title || p.name || "",
+          amount_in_stock: p.amount_in_stock || 0,
+          price: p.price || 0
+        }));
+        totalSummaryItems = summary.length;
+        totalSummaryPages = 1;
+        summaryResult = summary;
+      } else {
+        summary = (productsResult.items || []).map(p => ({
+          id: p.id || "",
+          title: p.title || p.name || "",
+          amount_in_stock: p.amount_in_stock || 0,
+          price: p.price || 0
+        }));
+        totalSummaryItems = productsResult.total || 0;
+        totalSummaryPages = productsResult.totalPages || 1;
+        currentSummaryPage = productsResult.page || 1;
+        summaryResult = {
+          items: summary,
+          total: totalSummaryItems,
+          page: currentSummaryPage,
+          limit: productsResult.limit || summaryItemsPerPage,
+          totalPages: totalSummaryPages
+        };
+      }
+      
+      CacheManager.set(summaryCacheKey, summaryResult);
     }
     
     // Check cache for movements
@@ -83,24 +182,18 @@ async function loadData(page) {
       console.log("📦 Using cached inventory movements (localStorage)");
       movements = movementsResult.items || [];
       
-      // ✅ Sort movements by created_at desc (newest first) - ensure correct order
-      movements.sort(function(a, b) {
-        var dateA = a.created_at || "";
-        var dateB = b.created_at || "";
-        // Handle Date objects
-        if (dateA instanceof Date) dateA = dateA.toISOString();
-        if (dateB instanceof Date) dateB = dateB.toISOString();
-        // Compare as strings
-        return dateB.localeCompare(dateA);
-      });
+      // ✅ Backend already sorts by created_at desc, no need to sort again
       
       totalMovements = movementsResult.total || 0;
       totalPages = movementsResult.totalPages || 0;
       currentPage = movementsResult.page || 1;
       
       renderSummary();
+      renderSummaryPagination();
       renderMovements();
+      
       renderProductOptions();
+      
       renderPagination();
       Pagination.updateURL(currentPage, itemsPerPage);
       return;
@@ -134,19 +227,7 @@ async function loadData(page) {
         });
       }
       
-      // ✅ Sort movements by created_at desc (newest first) - ensure correct order
-      if (movementsResult && movementsResult.items && Array.isArray(movementsResult.items)) {
-        movementsResult.items.sort(function(a, b) {
-          var dateA = a.created_at || "";
-          var dateB = b.created_at || "";
-          // Handle Date objects
-          if (dateA instanceof Date) dateA = dateA.toISOString();
-          if (dateB instanceof Date) dateB = dateB.toISOString();
-          // Compare as strings
-          return dateB.localeCompare(dateA);
-        });
-      }
-      
+      // ✅ Backend already sorts by created_at desc, no need to sort again
       movements = movementsResult.items || [];
       totalMovements = movementsResult.total || 0;
       totalPages = movementsResult.totalPages || 0;
@@ -157,8 +238,11 @@ async function loadData(page) {
     }
     
     renderSummary();
+    renderSummaryPagination();
     renderMovements();
-    renderProductOptions();
+    
+      renderProductOptions();
+    
     renderPagination();
     
     // Update URL
@@ -174,6 +258,113 @@ function renderPagination() {
     totalMovements,
     loadData,
     "phiếu"
+  );
+}
+
+/**
+ * Load summary page (for pagination)
+ */
+async function loadSummaryPage(page) {
+  currentSummaryPage = page || 1;
+  
+  // Show loading state for summary table
+  const summaryTbody = byId("summary-table")?.querySelector("tbody");
+  if (summaryTbody) {
+    summaryTbody.innerHTML = `<tr><td colspan="3" class="muted" style="text-align: center;">⏳ Đang tải dữ liệu...</td></tr>`;
+  }
+  
+  return apiCallWithLoading(async () => {
+    // ✅ Use page parameter for cache key (not currentSummaryPage which might be stale)
+    const summaryPage = currentSummaryPage;
+    const summaryCacheKey = CacheManager.key("inventory", "summary", summaryPage);
+    CacheManager.invalidate(summaryCacheKey);
+    
+    // ✅ Step 1: Try Cloudflare Worker first (use products API since summary is list products)
+    let productsResult = null;
+    
+    if (WorkerAPI && WorkerAPI.isConfigured()) {
+      try {
+        console.log("🚀 Trying Cloudflare Worker for inventory.summary (using products API)...");
+        productsResult = await WorkerAPI.productsList({
+          page: summaryPage,
+          limit: summaryItemsPerPage
+        });
+        
+        if (productsResult) {
+          console.log("✅ Worker cache HIT! Loaded from KV");
+        } else {
+          console.log("⚠️ Worker cache MISS, falling back to GAS");
+        }
+      } catch (error) {
+        console.error("⚠️ Worker error:", error);
+        console.log("Falling back to GAS...");
+      }
+    }
+    
+    // ✅ Step 2: Fallback to GAS if Worker fails or cache miss
+    if (!productsResult) {
+      console.log("📡 Fetching from GAS /exec endpoint...");
+      productsResult = await apiCall("inventory.summary", {
+        page: summaryPage,
+        limit: summaryItemsPerPage
+      });
+    }
+    
+    // Map products to summary format (id, title, amount_in_stock, price)
+    let summaryResult;
+    if (Array.isArray(productsResult)) {
+      summary = productsResult.map(p => ({
+        id: p.id || "",
+        title: p.title || p.name || "",
+        amount_in_stock: p.amount_in_stock || 0,
+        price: p.price || 0
+      }));
+      totalSummaryItems = summary.length;
+      totalSummaryPages = 1;
+      summaryResult = summary;
+    } else {
+      summary = (productsResult.items || []).map(p => ({
+        id: p.id || "",
+        title: p.title || p.name || "",
+        amount_in_stock: p.amount_in_stock || 0,
+        price: p.price || 0
+      }));
+      totalSummaryItems = productsResult.total || 0;
+      totalSummaryPages = productsResult.totalPages || 1;
+      currentSummaryPage = productsResult.page || 1;
+      summaryResult = {
+        items: summary,
+        total: totalSummaryItems,
+        page: currentSummaryPage,
+        limit: productsResult.limit || summaryItemsPerPage,
+        totalPages: totalSummaryPages
+      };
+    }
+    
+    // Save to cache
+    CacheManager.set(summaryCacheKey, summaryResult);
+    
+    renderSummary();
+    renderSummaryPagination();
+    renderProductOptions();
+  }, "Đang tải tồn kho...");
+}
+
+function renderSummaryPagination() {
+  // Only show pagination if there's more than 1 page
+  if (totalSummaryPages <= 1) {
+    const paginationEl = byId("summary-pagination");
+    if (paginationEl) paginationEl.innerHTML = "";
+    return;
+  }
+  
+  Pagination.render(
+    "summary-pagination",
+    currentSummaryPage,
+    totalSummaryPages,
+    totalSummaryItems,
+    loadSummaryPage,
+    "sản phẩm"
   );
 }
 
@@ -260,31 +451,313 @@ function formatPrice(price) {
   }).format(price);
 }
 
-function renderProductOptions() {
-  const select = byId("product_id");
-  if (!summary.length) {
-    select.innerHTML = `<option value="">Chưa có sản phẩm</option>`;
+/**
+ * Load product IDs index for search
+ */
+async function loadProductIdsIndex() {
+  // Check cache
+  const idsCacheKey = CacheManager.key("inventory", "product_ids_index");
+  const cachedIds = CacheManager.get(idsCacheKey);
+  
+  if (cachedIds && Array.isArray(cachedIds) && cachedIds.length > 0) {
+    console.log("📦 Using cached product IDs index");
+    productIdsIndex = cachedIds;
     return;
   }
-  select.innerHTML = summary.map(item => `
-    <option value="${item.id}" data-price="${item.price || 0}">${item.id} - ${item.title}</option>
-  `).join("");
   
-  // Auto-fill giá đề xuất khi chọn sản phẩm
-  select.addEventListener("change", function() {
-    const selectedOption = select.options[select.selectedIndex];
-    const price = selectedOption.getAttribute("data-price") || 0;
-    byId("unit_price").value = price;
-    byId("unit_price").placeholder = `Giá đề xuất: ${formatPrice(price)}`;
+  try {
+    // Load first page to get total, then we can infer IDs index exists
+    // Actually, we need to get IDs index from backend
+    // For now, extract from summary (already loaded products)
+    productIdsIndex = summary.map(item => item.id).filter(id => id);
+    
+    // Also try to get from products.list if available
+    if (productIdsIndex.length === 0) {
+      const result = await apiCall("products.list", { page: 1, limit: 20 });
+      if (result && result.items) {
+        productIdsIndex = result.items.map(item => item.id).filter(id => id);
+      } else if (Array.isArray(result)) {
+        productIdsIndex = result.map(item => item.id).filter(id => id);
+      }
+    }
+    
+    CacheManager.set(idsCacheKey, productIdsIndex);
+    console.log(`✅ Loaded ${productIdsIndex.length} product IDs for search`);
+  } catch (err) {
+    console.error("⚠️ Error loading product IDs index:", err);
+    productIdsIndex = summary.map(item => item.id).filter(id => id);
+  }
+}
+
+/**
+ * Search product by ID in cache
+ */
+function searchProductId(searchTerm) {
+  if (!searchTerm || searchTerm.trim() === "") {
+    return [];
+  }
+  
+  const term = searchTerm.trim().toLowerCase();
+  return productIdsIndex.filter(id => {
+    const idStr = String(id || "").toLowerCase();
+    return idStr.includes(term);
+  });
+}
+
+/**
+ * Load product detail and fill form
+ * Exposed to global scope for onclick handlers
+ */
+window.loadProductDetailAndFill = async function(productId) {
+  if (!productId || productId.trim() === "") {
+    return;
+  }
+  
+  const loadingEl = byId("product_loading");
+  const searchInput = byId("product_search");
+  const dropdown = byId("product_dropdown");
+  
+  try {
+    // Show loading spinner
+    if (loadingEl) loadingEl.style.display = "inline-block";
+    if (dropdown) dropdown.style.display = "none";
+    
+    const product = await apiCall("products.get", { id: productId });
+    
+    if (product) {
+      // Fill product_id select (hidden)
+      const select = byId("product_id");
+      if (select) select.value = product.id;
+      
+      // Get movement type to determine which price to use
+      const movementType = byId("movement_type")?.value || "IN";
+      
+      // Fill price based on movement type:
+      // - IN (nhập kho): import_price > price
+      // - OUT (xuất kho): price
+      let price = 0;
+      if (movementType === "OUT") {
+        price = product.price || 0;
+      } else {
+        // IN or default
+        price = product.import_price || product.price || 0;
+      }
+      
+      const unitPriceInput = byId("unit_price");
+      if (unitPriceInput) {
+        unitPriceInput.value = price;
+        unitPriceInput.placeholder = `Giá đề xuất: ${formatPrice(price)}`;
+      }
+      
+      // Update search input with product info
+      if (searchInput) {
+        searchInput.value = `${product.id} - ${product.title || product.name || ""}`;
+      }
+      
+      console.log("✅ Product loaded:", product);
+    }
+  } catch (err) {
+    console.error("⚠️ Error loading product detail:", err);
+    alert(`Không tìm thấy sản phẩm: ${productId}`);
+  } finally {
+    // Hide loading spinner
+    if (loadingEl) loadingEl.style.display = "none";
+  }
+}
+
+/**
+ * Render dropdown items
+ */
+function renderDropdownItems(items, isSearchMode = false) {
+  const dropdown = byId("product_dropdown");
+  if (!dropdown) return;
+  
+  if (!items || items.length === 0) {
+    dropdown.innerHTML = `<div style="padding: 8px; color: #666; text-align: center;">Không tìm thấy sản phẩm</div>`;
+    dropdown.style.display = "block";
+    return;
+  }
+  
+  const itemsHtml = items.map(item => {
+    const productId = item.id || item;
+    const productTitle = item.title || item.name || "";
+    const displayText = productTitle ? `${productId} - ${productTitle}` : productId;
+    
+    return `
+      <div 
+        class="dropdown-item" 
+        style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0;"
+        onmouseover="this.style.background='#f5f5f5'"
+        onmouseout="this.style.background='white'"
+        onclick="selectProductFromDropdown('${productId}')"
+      >
+        ${displayText}
+      </div>
+    `;
+  }).join("");
+  
+  dropdown.innerHTML = itemsHtml;
+  dropdown.style.display = "block";
+}
+
+/**
+ * Select product from dropdown
+ */
+window.selectProductFromDropdown = async function(productId) {
+  const searchInput = byId("product_search");
+  const dropdown = byId("product_dropdown");
+  
+  // Close dropdown immediately
+  if (dropdown) dropdown.style.display = "none";
+  
+  // Find product in summary to show title
+  const product = summary.find(p => p.id === productId);
+  if (product) {
+    if (searchInput) searchInput.value = `${productId} - ${product.title || ""}`;
+  } else {
+    if (searchInput) searchInput.value = productId;
+  }
+  
+  // Load product detail and fill form (with loading spinner)
+  await loadProductDetailAndFill(productId);
+};
+
+/**
+ * Initialize product search dropdown
+ */
+function initProductSearch() {
+  const searchInput = byId("product_search");
+  const dropdown = byId("product_dropdown");
+  const select = byId("product_id");
+  
+  if (!searchInput) return;
+  
+  // Only initialize once
+  if (productSearchInitialized) return;
+  productSearchInitialized = true;
+  
+  // Load product IDs index
+  loadProductIdsIndex();
+  
+  let searchTimeout = null;
+  let isDropdownOpen = false;
+  
+  // Show dropdown when input is focused (always show, even if has value)
+  searchInput.addEventListener("focus", function() {
+    const searchTerm = this.value.trim();
+    if (searchTerm === "") {
+      // Show summary products when empty
+      renderDropdownItems(summary);
+      isDropdownOpen = true;
+    } else {
+      // If has value, show search results
+      const matches = searchProductId(searchTerm);
+      if (matches.length > 0) {
+        const matchItems = matches.map(id => {
+          const found = summary.find(p => p.id === id);
+          return found || { id: id };
+        });
+        renderDropdownItems(matchItems, true);
+        isDropdownOpen = true;
+      } else {
+        // Show summary if no matches
+        renderDropdownItems(summary);
+        isDropdownOpen = true;
+      }
+    }
   });
   
-  // Trigger change để fill giá cho sản phẩm đầu tiên
-  if (select.options.length > 0) {
-    const firstOption = select.options[0];
-    const firstPrice = firstOption.getAttribute("data-price") || 0;
-    byId("unit_price").value = firstPrice;
-    byId("unit_price").placeholder = `Giá đề xuất: ${formatPrice(firstPrice)}`;
+  // Handle input/search
+  searchInput.addEventListener("input", function() {
+    const searchTerm = this.value.trim();
+    
+    if (searchTerm === "") {
+      // Show summary products when empty
+      renderDropdownItems(summary);
+      select.value = "";
+      return;
+    }
+    
+    // Debounce search
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      const matches = searchProductId(searchTerm);
+      
+      if (matches.length > 0) {
+        // Convert IDs to objects with id property for rendering
+        const matchItems = matches.map(id => {
+          // Try to find in summary first
+          const found = summary.find(p => p.id === id);
+          return found || { id: id };
+        });
+        renderDropdownItems(matchItems, true);
+        isDropdownOpen = true;
+      } else {
+        renderDropdownItems([]);
+        isDropdownOpen = true;
+      }
+    }, 300);
+  });
+  
+  // Handle Enter key
+  searchInput.addEventListener("keydown", async function(e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const searchTerm = this.value.trim();
+      if (searchTerm) {
+        const matches = searchProductId(searchTerm);
+        if (matches.length > 0) {
+          await selectProductFromDropdown(matches[0]);
+        }
+      }
+    } else if (e.key === "Escape") {
+      dropdown.style.display = "none";
+      isDropdownOpen = false;
+    }
+  });
+  
+  // Close dropdown when clicking outside
+  document.addEventListener("click", function(e) {
+    if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.style.display = "none";
+      isDropdownOpen = false;
+    }
+  });
+  
+  // Update price when movement type changes
+  const movementTypeSelect = byId("movement_type");
+  if (movementTypeSelect) {
+    movementTypeSelect.addEventListener("change", async function() {
+      const productId = byId("product_id")?.value;
+      if (productId) {
+        // Reload product detail to update price based on new movement type
+        await loadProductDetailAndFill(productId);
+      }
+    });
   }
+}
+
+function renderProductOptions() {
+  // Initialize search dropdown
+  if (typeof initProductSearch === 'function') {
+    initProductSearch();
+  }
+  
+  // Also populate hidden select with summary products (for form submission)
+  const select = byId("product_id");
+  if (!summary.length) {
+    if (select) select.innerHTML = "";
+    return;
+  }
+  
+  if (select) {
+    select.innerHTML = summary.map(item => `
+      <option value="${item.id}">${item.id} - ${item.title || ""}</option>
+    `).join("");
+  }
+  
+  // Update product IDs index from summary
+  productIdsIndex = summary.map(item => item.id).filter(id => id);
 }
 
 async function createMovement() {
@@ -360,11 +833,20 @@ async function createMovement() {
       note
     });
 
-    // ✅ Clear ALL cache after write action (create movement)
-    CacheManager.clearAllCache();
-    
-    // ✅ Also invalidate specific caches to be thorough
+    // ✅ Invalidate specific caches (optimized - only invalidate what's needed)
     CacheManager.invalidateOnInventoryChange();
+    
+    // ✅ Invalidate movements cache for page 1 (where new movement appears)
+    const movementsCacheKeyPage1 = CacheManager.key("inventory", "movements", 1, itemsPerPage);
+    CacheManager.invalidate(movementsCacheKeyPage1);
+    
+    // ✅ Invalidate summary cache to reload updated stock
+    const summaryCacheKey = CacheManager.key("inventory", "summary", currentSummaryPage);
+    CacheManager.invalidate(summaryCacheKey);
+    
+    // ✅ Invalidate product IDs index cache
+    const idsCacheKey = CacheManager.key("inventory", "product_ids_index");
+    CacheManager.invalidate(idsCacheKey);
 
     byId("qty").value = "";
     byId("unit_price").value = "";
@@ -376,11 +858,14 @@ async function createMovement() {
       totalMovements++;
       totalPages = Math.ceil(totalMovements / itemsPerPage);
       renderPagination();
-      // Reload summary to update stock (summary needs to be reloaded)
-      await loadData(currentPage);
+      
+      // ✅ Reload summary to update stock (reload current summary page)
+      await loadSummaryPage(currentSummaryPage);
     } else {
       const urlParams = Pagination.getParamsFromURL();
       await loadData(urlParams.page);
+      // ✅ Also reload summary to update stock
+      await loadSummaryPage(currentSummaryPage);
     }
   } catch (err) {
     // ✅ Handle token expiration - prompt user to login again

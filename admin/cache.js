@@ -79,6 +79,13 @@ const CacheManager = {
   },
 
   /**
+   * Invalidate cache (alias for remove)
+   */
+  invalidate(key) {
+    this.remove(key);
+  },
+
+  /**
    * Get TTL for cache key
    */
   getTTL(key) {

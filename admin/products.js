@@ -9,7 +9,7 @@ let editMode = "create";
 let currentPage = 1;
 let totalPages = 0;
 let totalProducts = 0;
-const itemsPerPage = 50;
+const itemsPerPage = PAGINATION.DEFAULT_LIMIT;
 
 // Image resize constants
 const IMAGE_MAX_WIDTH = 20;
@@ -422,19 +422,18 @@ async function loadProducts(page) {
         });
         
         if (result) {
-          console.log("✅ Worker cache HIT! Loaded from Cloudflare KV");
-        } else {
-          console.log("⚠️ Worker cache MISS, falling back to GAS");
+          console.log("✅ Worker success! (may be from KV cache or GAS fallback)");
         }
       } catch (error) {
         console.error("⚠️ Worker error:", error);
-        console.log("Falling back to GAS...");
+        console.log("Worker failed completely, will fallback to GAS...");
       }
     }
     
-    // ✅ Step 3: Fallback to GAS if Worker fails or cache miss
+    // ✅ Step 3: Fallback to GAS only if Worker completely fails (network error, timeout, etc.)
+    // Note: Worker already has fallback to GAS for cache miss, so this is only for Worker failure
     if (!result) {
-      console.log("📡 Fetching from GAS /exec endpoint...");
+      console.log("📡 Worker unavailable, fetching directly from GAS /exec endpoint...");
       result = await apiCall("products.list", {
         page: page,
         limit: itemsPerPage
