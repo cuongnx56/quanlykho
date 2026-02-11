@@ -4,7 +4,7 @@ let leads = [];
 let currentPage = 1;
 let totalPages = 0;
 let totalLeads = 0;
-const itemsPerPage = 50;
+const itemsPerPage = PAGINATION.DEFAULT_LIMIT;
 
 // Override resetSession to include page-specific cleanup
 function resetSession() {
@@ -87,10 +87,7 @@ function renderPagination() {
     currentPage,
     totalPages,
     totalLeads,
-    async (page) => {
-      Pagination.updateURL(page, itemsPerPage);
-      await loadLeads(page);
-    },
+    loadLeads,
     "leads"
   );
 }
@@ -114,6 +111,7 @@ async function loadLeads(page) {
       currentPage = cached.page || 1;
       renderLeads();
       renderPagination();
+      Pagination.updateURL(currentPage, itemsPerPage);
       return;
     }
 
@@ -131,12 +129,13 @@ async function loadLeads(page) {
     leads = result.items || [];
     totalLeads = result.total || 0;
     totalPages = result.totalPages || 0;
-    currentPage = result.page || page;
+    currentPage = result.page || 1;
 
     CacheManager.set(cacheKey, result, 5 * 60 * 1000);
 
     renderLeads();
     renderPagination();
+    Pagination.updateURL(currentPage, itemsPerPage);
   }, "Đang tải leads...");
 }
 

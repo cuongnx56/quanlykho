@@ -8,7 +8,7 @@ let editMode = "create";
 let currentPage = 1;
 let totalPages = 0;
 let totalCategories = 0;
-const itemsPerPage = 50;
+const itemsPerPage = PAGINATION.DEFAULT_LIMIT;
 
 // Image resize constants
 const IMAGE_MAX_WIDTH = 68;
