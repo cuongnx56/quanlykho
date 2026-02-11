@@ -899,8 +899,10 @@ byId("file-image-upload").addEventListener("change", async (e) => {
     }
     
     // ✅ Auto-fill image link and show preview (no alert needed)
-    byId("field-image-link").value = result.url;
-    showImagePreview(result.url);
+    // API returns: { success: true, data: { url: "...", filename: "..." } }
+    const imageUrl = result.data?.url || result.url || '';
+    byId("field-image-link").value = imageUrl;
+    showImagePreview(imageUrl);
     
     // Show success indicator briefly
     btnUpload.innerHTML = '✅ Hoàn thành';
@@ -1231,7 +1233,9 @@ byId("btn-save-detail").addEventListener("click", async () => {
     }
     
     // Auto-fill detail URL
-    byId("field-detail-url").value = result.url;
+    // API returns: { success: true, data: { url: "...", product_id: "..." } }
+    const detailUrl = result.data?.url || result.url || '';
+    byId("field-detail-url").value = detailUrl;
     showDetailStatus("✅ Đã lưu detail lên GitHub thành công!", "success");
     byId("btn-load-detail").style.display = "inline-block";
     
