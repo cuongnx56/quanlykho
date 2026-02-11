@@ -9,7 +9,7 @@ let customers = [];
 let currentPage = 1;
 let totalPages = 0;
 let totalOrders = 0;
-const itemsPerPage = 50;
+const itemsPerPage = PAGINATION.DEFAULT_LIMIT;
 let currentItems = [];
 
 // Override resetSession to include page-specific cleanup

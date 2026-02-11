@@ -1,8 +1,8 @@
 // Pagination Helper - Reusable pagination utilities
 const Pagination = {
-  // Default config
-  defaultLimit: 50,
-  maxLimit: 100,
+  // Default config (use PAGINATION constants if available, otherwise fallback)
+  defaultLimit: typeof PAGINATION !== 'undefined' ? PAGINATION.DEFAULT_LIMIT : 20,
+  maxLimit: typeof PAGINATION !== 'undefined' ? PAGINATION.MAX_LIMIT : 20,
   
   // Store callbacks for each pagination instance
   callbacks: {},

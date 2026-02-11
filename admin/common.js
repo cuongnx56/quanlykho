@@ -6,6 +6,13 @@
 // Constants
 const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbzs7FiPxCy0Offo90kG3MqrfkgjilhI25AsrEh09TzF7A_PPsxs3C_Xq4ifCLKiQdIR/exec";
 
+// Pagination constants (shared across all admin pages)
+const PAGINATION = {
+  DEFAULT_LIMIT: 20,
+  MAX_LIMIT: 20,
+  MIN_LIMIT: 1
+};
+
 const sessionDefaults = {
   apiUrl: DEFAULT_API_URL,
   apiKey: "",
