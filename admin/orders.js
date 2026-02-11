@@ -403,6 +403,50 @@ function getCustomerDisplayName(customerId) {
   return customer.name || customer.phone || customer.email || customer.id || customerId;
 }
 
+// ✅ Helper: items_json từ API có thể là array (object) hoặc string JSON — chuẩn hóa thành array
+function getOrderItems(order) {
+  const raw = order && order.items_json;
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  }
+  return [];
+}
+
+// ✅ Lấy tên hiển thị sản phẩm (Map trước, sau đó tìm không phân biệt hoa thường)
+function getProductDisplayName(productId) {
+  if (!productId) return "";
+  const id = String(productId).trim();
+  if (window.productsMap && window.productsMap.has(id))
+    return window.productsMap.get(id) || id;
+  if (products && Array.isArray(products)) {
+    const p = products.find(x => String(x.id || "").toLowerCase() === id.toLowerCase());
+    return p ? (p.title || p.name || p.id) : id;
+  }
+  return id;
+}
+
+// ✅ Chuẩn hóa shipping_info (API có thể trả về object hoặc string JSON)
+function getShippingInfo(order) {
+  const raw = order && order.shipping_info;
+  if (!raw) return null;
+  if (typeof raw === "object" && raw !== null) return raw;
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      return (parsed && typeof parsed === "object") ? parsed : null;
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
+}
+
 function renderOrders() {
   const tbody = byId("orders-table").querySelector("tbody");
   if (!orders.length) {
@@ -435,22 +479,14 @@ function renderOrders() {
     const statusClass = getStatusClass(status);
     const actions = getStatusActions(order.id, status);
     
-    // ✅ Get product names from items_json (optimized with Map for O(1) lookup)
+    // ✅ Get product names from items_json (items_json có thể là array hoặc string)
+    const items = getOrderItems(order);
     let productNames = "";
-    try {
-      const items = JSON.parse(order.items_json || "[]");
-      if (Array.isArray(items) && items.length > 0) {
-        // Get product names using Map lookup (O(1) instead of O(n))
-        const productNameList = items.map(item => {
-          const productId = item.product_id || "";
-          return window.productsMap.get(productId) || productId;
-        });
-        productNames = productNameList.join(", ");
-      }
-    } catch (e) {
-      productNames = "";
+    if (items.length > 0) {
+      const productNameList = items.map(item => getProductDisplayName(item.product_id));
+      productNames = productNameList.filter(Boolean).join(", ");
     }
-    
+
     // ✅ Get customer display name (name → phone → email → id)
     const customerDisplayName = getCustomerDisplayName(order.customer_id);
     
@@ -485,34 +521,22 @@ function updateOrderInList(order) {
     const statusClass = getStatusClass(status);
     const actions = getStatusActions(order.id, status);
     
-    // ✅ Get product names from items_json (optimized with Map for O(1) lookup)
+    // ✅ Get product names from items_json (items_json có thể là array hoặc string)
+    const items = getOrderItems(order);
     let productNames = "";
-    try {
-      const items = JSON.parse(order.items_json || "[]");
-      if (Array.isArray(items) && items.length > 0) {
-        // Ensure productsMap exists
-        if (!window.productsMap || window.productsMap.size === 0) {
-          window.productsMap = new Map();
-          if (products && Array.isArray(products)) {
-            products.forEach(p => {
-              if (p.id) {
-                window.productsMap.set(p.id, p.title || p.name || p.id);
-              }
-            });
-          }
+    if (items.length > 0) {
+      if (!window.productsMap || window.productsMap.size === 0) {
+        window.productsMap = new Map();
+        if (products && Array.isArray(products)) {
+          products.forEach(p => {
+            if (p.id) window.productsMap.set(p.id, p.title || p.name || p.id);
+          });
         }
-        
-        // Get product names using Map lookup (O(1) instead of O(n))
-        const productNameList = items.map(item => {
-          const productId = item.product_id || "";
-          return window.productsMap.get(productId) || productId;
-        });
-        productNames = productNameList.join(", ");
       }
-    } catch (e) {
-      productNames = "";
+      const productNameList = items.map(item => getProductDisplayName(item.product_id));
+      productNames = productNameList.filter(Boolean).join(", ");
     }
-    
+
     // ✅ Get customer display name (name → phone → email → id)
     const customerDisplayName = getCustomerDisplayName(order.customer_id);
     
@@ -618,15 +642,12 @@ function viewOrder(orderId) {
   const order = orders.find(o => o.id === orderId);
   if (!order) return;
   
-  let itemsHtml = "";
-  try {
-    const items = JSON.parse(order.items_json || "[]");
-    itemsHtml = items.map(item => `
-      <div>${item.product_id || ""} × ${item.qty || 0} @ ${formatPrice(item.price || 0)} = ${formatPrice((item.qty || 0) * (item.price || 0))}</div>
-    `).join("");
-  } catch (e) {
-    itemsHtml = "Không có dữ liệu items";
-  }
+  const items = getOrderItems(order);
+  const itemsHtml = items.length
+    ? items.map(item => `
+      <div>${getProductDisplayName(item.product_id)} × ${item.qty || 0} @ ${formatPrice(item.price || 0)} = ${formatPrice((item.qty || 0) * (item.price || 0))}</div>
+    `).join("")
+    : "Không có dữ liệu items";
   
   let invoiceBtn = "";
   if (order.status === "DONE") {
@@ -656,26 +677,20 @@ function viewOrder(orderId) {
     <div class="detail-section">
       <span class="detail-label">Tổng tiền:</span> <strong>${formatPrice(order.total || 0)}</strong>
     </div>
-    ${order.shipping_info ? (() => {
-      try {
-        const shipping = JSON.parse(order.shipping_info);
-        let shippingHtml = '<div class="shipping-info-detail">';
-        if (shipping.address) shippingHtml += `<div><strong>Địa chỉ:</strong> ${escapeHtml(shipping.address)}</div>`;
-        if (shipping.city) shippingHtml += `<div><strong>Thành phố/Tỉnh:</strong> ${escapeHtml(shipping.city)}</div>`;
-        if (shipping.zipcode) shippingHtml += `<div><strong>Mã bưu điện:</strong> ${escapeHtml(shipping.zipcode)}</div>`;
-        if (shipping.note) shippingHtml += `<div><strong>Ghi chú giao hàng:</strong> ${escapeHtml(shipping.note)}</div>`;
-        shippingHtml += '</div>';
-        return `<div class="detail-section">
-          <span class="detail-label">Thông tin giao hàng:</span>
-          ${shippingHtml}
-        </div>`;
-      } catch (e) {
-        // Fallback: display as plain text if not valid JSON
-        return `<div class="detail-section">
-          <span class="detail-label">Thông tin giao hàng:</span> ${escapeHtml(order.shipping_info)}
-        </div>`;
-      }
-    })() : ''}
+    ${(() => {
+      const shipping = getShippingInfo(order);
+      if (!shipping) return "";
+      let shippingHtml = '<div class="shipping-info-detail">';
+      if (shipping.address) shippingHtml += `<div><strong>Địa chỉ:</strong> ${escapeHtml(shipping.address)}</div>`;
+      if (shipping.city) shippingHtml += `<div><strong>Thành phố/Tỉnh:</strong> ${escapeHtml(shipping.city)}</div>`;
+      if (shipping.zipcode) shippingHtml += `<div><strong>Mã bưu điện:</strong> ${escapeHtml(shipping.zipcode)}</div>`;
+      if (shipping.note) shippingHtml += `<div><strong>Ghi chú giao hàng:</strong> ${escapeHtml(shipping.note)}</div>`;
+      shippingHtml += "</div>";
+      return `<div class="detail-section">
+        <span class="detail-label">Thông tin giao hàng:</span>
+        ${shippingHtml}
+      </div>`;
+    })()}
     ${order.note ? `<div class="detail-section">
       <span class="detail-label">Ghi chú đơn hàng:</span> ${escapeHtml(order.note)}
     </div>` : ''}
