@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="loading.css">
   <link rel="stylesheet" href="pagination.css">
   <link rel="stylesheet" href="navigation.css">
+  <link rel="stylesheet" href="cache-notice.css">
 </head>
 <body>
 
@@ -25,6 +26,9 @@
     </div>
   </div>
 </header>
+
+<!-- Cache Notice - Loaded from cache-notice.html -->
+<div id="cache-notice-container" class="container"></div>
 
 <main class="container">
   <section class="card" id="login-section">
@@ -98,6 +102,31 @@
         console.error('❌ Error loading sidebar:', err);
       });
   })();
+
+  // Load cache notice HTML from cache-notice.html
+  (function() {
+    fetch('cache-notice.html')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to load cache notice');
+        }
+        return response.text();
+      })
+      .then(html => {
+        document.getElementById('cache-notice-container').innerHTML = html;
+        // Initialize cache notice after loading
+        const script = document.createElement('script');
+        script.src = 'cache-notice.js';
+        script.onload = function() {
+          console.log('✅ Cache notice loaded and initialized');
+        };
+        document.body.appendChild(script);
+      })
+      .catch(err => {
+        console.error('❌ Error loading cache notice:', err);
+        // Don't show error, just log it (cache notice is not critical)
+      });
+  })();  
 </script>
 <script src="leads.js"></script>
 </body>

@@ -43,13 +43,5 @@ const Loading = {
   }
 };
 
-// Wrapper for API calls with loading
-async function apiCallWithLoading(apiCallFn, message = "Đang xử lý...") {
-  Loading.show(message);
-  try {
-    const result = await apiCallFn();
-    return result;
-  } finally {
-    Loading.hide();
-  }
-}
+// Expose globally so common.js apiCallWithLoading and other pages can show spinner
+window.Loading = Loading;

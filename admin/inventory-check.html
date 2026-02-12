@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="sidebar.css">
   <link rel="stylesheet" href="inventory-check.css">
+  <link rel="stylesheet" href="inventory.css">
   <link rel="stylesheet" href="loading.css">
   <link rel="stylesheet" href="navigation.css">
 </head>
@@ -51,11 +52,26 @@
     </div>
     <div class="grid">
       <div>
-        <label>Product ID *</label>
-        <input id="product_id" type="text" placeholder="VD: SKU-001">
+        <div class="product-combobox">
+          <div class="product-combobox-input-wrap">
+            <input
+              type="text"
+              id="product_search"
+              class="product-combobox-input"
+              placeholder="Tìm hoặc chọn sản phẩm..."
+              autocomplete="off"
+              aria-autocomplete="list"
+              aria-expanded="false"
+              aria-haspopup="listbox"
+            >
+            <span id="product_loading" class="product-combobox-loading" aria-hidden="true">⏳</span>
+          </div>
+          <input type="hidden" id="product_id">
+          <div id="product_dropdown" class="product-combobox-dropdown" role="listbox" aria-hidden="true"></div>
+        </div>
       </div>
     </div>
-    <button id="btn-check">Kiểm tra</button>
+    <button id="btn-check" style="display: none;">Kiểm tra</button>
     <div id="result" class="result"></div>
   </section>
 </main>
@@ -64,6 +80,7 @@
 <script src="auth.js"></script>
 <script src="cache.js"></script>
 <script src="common.js"></script>
+<script src="worker-api.js"></script>
 <script>
   // Load sidebar HTML from sidebar.html
   (function() {
