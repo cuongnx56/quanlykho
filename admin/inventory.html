@@ -54,22 +54,22 @@
     <div class="grid">
       <div>
         <label>Sản phẩm</label>
-        <div style="position: relative;">
-          <div style="position: relative;">
-            <input 
-              type="text" 
-              id="product_search" 
-              placeholder="Tìm hoặc chọn sản phẩm..." 
-              style="width: 100%; padding: 8px; padding-right: 30px; border: 1px solid #ddd; border-radius: 4px;"
+        <div class="product-combobox">
+          <div class="product-combobox-input-wrap">
+            <input
+              type="text"
+              id="product_search"
+              class="product-combobox-input"
+              placeholder="Tìm hoặc chọn sản phẩm..."
               autocomplete="off"
+              aria-autocomplete="list"
+              aria-expanded="false"
+              aria-haspopup="listbox"
             >
-            <span id="product_loading" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); color: #666;">⏳</span>
+            <span id="product_loading" class="product-combobox-loading" aria-hidden="true">⏳</span>
           </div>
-          <select id="product_id" style="display: none;"></select>
-          <div 
-            id="product_dropdown" 
-            style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-top: none; border-radius: 0 0 4px 4px; max-height: 200px; overflow-y: auto; z-index: 1000; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
-          ></div>
+          <select id="product_id" class="product-combobox-select" aria-hidden="true"></select>
+          <div id="product_dropdown" class="product-combobox-dropdown" role="listbox" aria-hidden="true"></div>
         </div>
       </div>
       <div>
