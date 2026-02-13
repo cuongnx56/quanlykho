@@ -1,504 +1,405 @@
-// Use common utilities from common.js
-// DEFAULT_API_URL, sessionDefaults, and session are already declared in common.js
-// Just use them directly (they're in global scope) or reference via window.CommonUtils
-// No need to redeclare - they're already available
+// =============================================================================
+// reports.js
+//
+// Sections:
+//   1. Dashboard hôm nay  → reports.dashboard
+//   2. Doanh thu          → reports.sales  (chart + table)
+//   3. Sản phẩm bán chạy  → reports.top_products
+//   4. Tồn kho & cảnh báo → reports.stock_alert
+//
+// Shared:
+//   fetchReport()  – cache-or-fetch wrapper, 1 pattern dùng cho tất cả
+//   renderTable()  – generic table renderer
+//   handleError()  – centralized error + auth redirect
+//
+// Không có:
+//   - formatPrice redeclare (dùng từ common.js)
+//   - WorkerAPI init dead code
+//   - window.onclick override
+//   - Promise.all → dùng Promise.allSettled (sections độc lập)
+// =============================================================================
 
-// resetSession is now from common.js, but we can override if needed
-// Use the stored original from common.js
-function resetSession() {
-  // Call the original resetSession from common.js
-  if (window._originalResetSession) {
-    window._originalResetSession();
+// ─── Page state ───────────────────────────────────────────────────────────────
+
+let salesChart = null;
+
+// ─── Shared: fetchReport ──────────────────────────────────────────────────────
+
+/**
+ * fetchReport – cache-or-fetch wrapper dùng chung cho mọi report.
+ *
+ * Thay thế pattern lặp 5 lần:
+ *   const cached = CacheManager.get(key);
+ *   if (cached) { data = cached; } else { data = await apiCall(); CacheManager.set(); }
+ *
+ * @param {string}   cacheKey  – CacheManager key
+ * @param {string}   action    – GAS action string (e.g. "reports.sales")
+ * @param {Object}   params    – extra params (token được inject tự động)
+ * @returns {*}      data từ cache hoặc API
+ */
+async function fetchReport(cacheKey, action, params) {
+  const cached = CacheManager.get(cacheKey);
+  if (cached) {
+    console.log("📦 Cache hit:", cacheKey);
+    return cached;
   }
-  // Page-specific cleanup if needed
+  const data = await apiCall(action, { token: session.token, ...params });
+  CacheManager.set(cacheKey, data);
+  return data;
 }
-// Override window.resetSession with our version
-window.resetSession = resetSession;
 
-// apiCall is now from common.js
+// ─── Shared: handleError ──────────────────────────────────────────────────────
 
-async function login() {
-  session.apiUrl = DEFAULT_API_URL;
-  session.apiKey = byId("api_key").value.trim();
-  session.email = byId("email").value.trim();
-  const password = byId("password").value;
+function handleError(err, context) {
+  const msg = err?.message || String(err);
+  console.error("❌", context, msg);
+  const isAuth = msg.includes("Token expired") || msg.includes("Unauthorized") || msg.includes("hết hạn");
+  if (isAuth) {
+    alert("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
+    resetSession();
+    window.location.reload();
+    return;
+  }
+  // Hiển thị lỗi nhẹ (không alert spam khi loadAllReports)
+  console.warn("Report error [" + context + "]:", msg);
+}
 
-  if (!session.apiKey || !session.email || !password) {
-    alert("Vui lòng nhập đủ API KEY, email, password");
+// ─── Shared: renderTable ─────────────────────────────────────────────────────
+
+/**
+ * renderTable – render tbody từ array items + column definitions.
+ * Tất cả giá trị được escapeHtml() để chống XSS.
+ *
+ * @param {string}   tbodyId  – id của <tbody>
+ * @param {Array}    items    – array of data objects
+ * @param {Array}    cols     – [{ key, label, render }]
+ *                             render(item) → string (đã escape bởi caller nếu HTML tùy chỉnh)
+ * @param {string}   emptyMsg – text khi không có data
+ */
+function renderTable(tbodyId, items, cols, emptyMsg) {
+  const tbody = byId(tbodyId);
+  if (!tbody) return;
+
+  if (!items || !items.length) {
+    tbody.innerHTML = '<tr><td colspan="' + cols.length + '" class="muted">' +
+      escapeHtml(emptyMsg || "Không có dữ liệu") + "</td></tr>";
     return;
   }
 
-  const data = await apiCall("auth.login", {
-    email: session.email,
-    password
-  });
-
-  session.token = data.token;
-  session.email = data.email;
-  session.role = data.role;
-  window.AuthSession.save(session);
-  updateSessionUI();
-  await loadAllReports();
+  tbody.innerHTML = items.map(function(item) {
+    return "<tr>" + cols.map(function(col) {
+      const val = col.render ? col.render(item) : escapeHtml(item[col.key] ?? "");
+      return "<td" + (col.cls ? ' class="' + col.cls + '"' : "") + ">" + val + "</td>";
+    }).join("") + "</tr>";
+  }).join("");
 }
 
-async function loadAllReports() {
-  return apiCallWithLoading(async () => {
-    await Promise.all([
-      loadDashboard(),
-      loadLowStock(),
-      loadStockValue(),
-      loadMovementReport()
-    ]);
-    // Load sales report with default settings
-    setDefaultSalesDates();
-    await loadSalesReport();
-  }, "Đang tải báo cáo...");
-}
+// =============================================================================
+// 1. Dashboard hôm nay
+// =============================================================================
 
 async function loadDashboard() {
   try {
-    // Check cache
     const cacheKey = CacheManager.key("reports", "dashboard");
-    const cached = CacheManager.get(cacheKey);
-    
-    let data;
-    if (cached) {
-      console.log("📦 Using cached dashboard data");
-      data = cached;
-    } else {
-      data = await apiCall("reports.dashboard", {
-        token: session.token
-      });
-      CacheManager.set(cacheKey, data);
-    }
+    const data     = await fetchReport(cacheKey, "reports.dashboard", {});
 
-    byId("total-products").textContent = data.total_products || 0;
-    byId("total-stock").textContent = data.total_stock || 0;
-    byId("total-value").textContent = formatPrice(data.total_value || 0);
+    byId("today-revenue").textContent  = formatPrice(data.today_revenue  || 0);
+    byId("today-orders").textContent   = data.today_orders   || 0;
+    byId("pending-orders").textContent = data.pending_orders || 0;
     byId("low-stock-count").textContent = data.low_stock_count || 0;
   } catch (err) {
-    console.error(err);
+    handleError(err, "dashboard");
   }
 }
 
-async function loadLowStock() {
-  const threshold = byId("threshold").value || 10;
-  try {
-    // Check cache
-    const cacheKey = CacheManager.key("reports", "low_stock", threshold);
-    const cached = CacheManager.get(cacheKey);
-    
-    let data;
-    if (cached) {
-      console.log("📦 Using cached low stock data");
-      data = cached;
-    } else {
-      data = await apiCall("reports.low_stock", {
-        token: session.token,
-        threshold: threshold
-      });
-      CacheManager.set(cacheKey, data);
-    }
+// =============================================================================
+// 2. Doanh thu theo thời gian
+// =============================================================================
 
-    renderLowStock(data);
-  } catch (err) {
-    console.error(err);
-  }
-}
-
-function renderLowStock(items) {
-  const tbody = byId("low-stock-table").querySelector("tbody");
-  if (!items.length) {
-    tbody.innerHTML = `<tr><td colspan="4" class="muted">Không có sản phẩm sắp hết</td></tr>`;
-    return;
-  }
-  tbody.innerHTML = items.map(item => `
-    <tr>
-      <td>${item.id || ""}</td>
-      <td>${item.title || ""}</td>
-      <td class="text-center">${item.amount_in_stock || 0}</td>
-      <td class="text-center">${formatPrice(item.price || 0)}</td>
-    </tr>
-  `).join("");
-}
-
-async function loadStockValue() {
-  try {
-    // Check cache
-    const cacheKey = CacheManager.key("reports", "stock_value");
-    const cached = CacheManager.get(cacheKey);
-    
-    let data;
-    if (cached) {
-      console.log("📦 Using cached stock value data");
-      data = cached;
-    } else {
-      data = await apiCall("reports.stock_value", {
-        token: session.token
-      });
-      CacheManager.set(cacheKey, data);
-    }
-
-    renderStockValue(data.products, data.grand_total);
-  } catch (err) {
-    console.error(err);
-  }
-}
-
-function renderStockValue(items, grandTotal) {
-  const tbody = byId("stock-value-table").querySelector("tbody");
-  byId("grand-total").textContent = formatPrice(grandTotal || 0);
-  
-  if (!items.length) {
-    tbody.innerHTML = `<tr><td colspan="7" class="muted">Chưa có dữ liệu</td></tr>`;
-    return;
-  }
-  
-  let html = "";
-  items.forEach((item, index) => {
-    const rowId = `product-${index}`;
-    html += `
-      <tr>
-        <td>${item.id || ""}</td>
-        <td>${item.title || ""}</td>
-        <td class="text-center">${item.current_stock || 0}</td>
-        <td class="text-center">${formatPrice(item.in_value || 0)}</td>
-        <td class="text-center">${formatPrice(item.out_value || 0)}</td>
-        <td class="text-center"><strong>${formatPrice(item.total_value || 0)}</strong></td>
-        <td class="text-center">
-          <button class="expand-btn" onclick="toggleDetail('${rowId}')">Xem</button>
-        </td>
-      </tr>
-      <tr id="${rowId}" class="detail-row" style="display: none;">
-        <td colspan="7">
-          <div class="detail-content">
-            <strong>Chi tiết nhập/xuất:</strong>
-            <ul class="movement-list">
-              ${renderMovements(item.movements)}
-            </ul>
-          </div>
-        </td>
-      </tr>
-    `;
-  });
-  
-  tbody.innerHTML = html;
-}
-
-function renderMovements(movements) {
-  if (!movements || !movements.length) {
-    return '<li>Chưa có giao dịch</li>';
-  }
-  
-  return movements.map(m => {
-    const sign = m.type === "IN" ? "+" : (m.type === "OUT" ? "-" : "±");
-    return `
-      <li class="${m.type}">
-        <strong>${m.type}</strong>: ${sign}${m.qty} × ${formatPrice(m.unit_price)} = ${formatPrice(m.value)}
-        <span style="color: #94a3b8; font-size: 12px; margin-left: 8px;">${m.created_at || ""}</span>
-      </li>
-    `;
-  }).join("");
-}
-
-function toggleDetail(rowId) {
-  const row = document.getElementById(rowId);
-  if (row.style.display === "none") {
-    row.style.display = "table-row";
-  } else {
-    row.style.display = "none";
-  }
-}
-
-async function loadMovementReport() {
-  const fromDate = byId("from-date").value;
-  const toDate = byId("to-date").value;
+async function loadSales() {
+  const period   = byId("sales-period")?.value    || "day";
+  const fromDate = byId("sales-from-date")?.value || "";
+  const toDate   = byId("sales-to-date")?.value   || "";
 
   try {
-    // Check cache
-    const cacheKey = CacheManager.key("reports", "inventory_movement", fromDate || "all", toDate || "all");
-    const cached = CacheManager.get(cacheKey);
-    
-    let data;
-    if (cached) {
-      console.log("📦 Using cached movement report data");
-      data = cached;
-    } else {
-      data = await apiCall("reports.inventory_movement", {
-        token: session.token,
-        from_date: fromDate,
-        to_date: toDate
-      });
-      CacheManager.set(cacheKey, data);
-    }
-
-    renderMovementReport(data.summary);
-  } catch (err) {
-    console.error(err);
-  }
-}
-
-function renderMovementReport(summary) {
-  const tbody = byId("movement-report-table").querySelector("tbody");
-  const keys = Object.keys(summary);
-  if (!keys.length) {
-    tbody.innerHTML = `<tr><td colspan="6" class="muted">Chưa có dữ liệu</td></tr>`;
-    return;
-  }
-  tbody.innerHTML = keys.map(productId => {
-    const item = summary[productId];
-    return `
-      <tr>
-        <td>${productId}</td>
-        <td class="text-center">${item.in_qty || 0}</td>
-        <td class="text-center">${formatPrice(item.in_value || 0)}</td>
-        <td class="text-center">${item.out_qty || 0}</td>
-        <td class="text-center">${formatPrice(item.out_value || 0)}</td>
-        <td class="text-center">${item.adjust_qty || 0}</td>
-      </tr>
-    `;
-  }).join("");
-}
-
-function formatPrice(price) {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND'
-  }).format(price);
-}
-
-byId("btn-login").addEventListener("click", async () => {
-  const btn = byId("btn-login");
-  Loading.button(btn, true);
-  try {
-    await login();
-  } catch (err) {
-    alert(err.message);
-  } finally {
-    Loading.button(btn, false);
-  }
-});
-
-byId("btn-logout").addEventListener("click", () => {
-  resetSession();
-});
-
-byId("btn-refresh-low-stock").addEventListener("click", async () => {
-  const btn = byId("btn-refresh-low-stock");
-  Loading.button(btn, true);
-  try {
-    await loadLowStock();
-  } catch (err) {
-    alert(err.message);
-  } finally {
-    Loading.button(btn, false);
-  }
-});
-
-byId("btn-filter-movement").addEventListener("click", async () => {
-  const btn = byId("btn-filter-movement");
-  Loading.button(btn, true);
-  try {
-    await loadMovementReport();
-  } catch (err) {
-    alert(err.message);
-  } finally {
-    Loading.button(btn, false);
-  }
-});
-
-// Sales Report
-let salesChart = null;
-
-async function loadSalesReport() {
-  const period = byId("sales-period").value;
-  const fromDate = byId("sales-from-date").value;
-  const toDate = byId("sales-to-date").value;
-
-  try {
-    // Check cache
     const cacheKey = CacheManager.key("reports", "sales", period, fromDate || "all", toDate || "all");
-    const cached = CacheManager.get(cacheKey);
-    
-    let data;
-    if (cached) {
-      console.log("📦 Using cached sales report data");
-      data = cached;
-    } else {
-      data = await apiCall("reports.sales", {
-        token: session.token,
-        period: period,
-        from_date: fromDate || null,
-        to_date: toDate || null
-      });
-      CacheManager.set(cacheKey, data);
-    }
+    const data     = await fetchReport(cacheKey, "reports.sales", {
+      period,
+      from_date: fromDate || null,
+      to_date  : toDate   || null
+    });
 
-    // Update summary
-    byId("sales-total-revenue").textContent = formatPrice(data.total_revenue || 0);
-    byId("sales-total-orders").textContent = data.total_orders || 0;
-    byId("sales-avg-order").textContent = formatPrice(data.average_order_value || 0);
+    byId("sales-total-revenue").textContent = formatPrice(data.total_revenue       || 0);
+    byId("sales-total-orders").textContent  = data.total_orders                    || 0;
+    byId("sales-avg-order").textContent     = formatPrice(data.average_order_value || 0);
 
-    // Render chart
-    renderSalesChart(data.data, period);
-
-    // Render table
-    renderSalesTable(data.data, period);
+    renderSalesChart(data.data || [], period);
+    renderSalesTable(data.data || []);
   } catch (err) {
-    console.error("Error loading sales report:", err);
-    alert("Lỗi: " + err.message);
+    handleError(err, "sales");
   }
 }
 
 function renderSalesChart(data, period) {
-  const ctx = document.getElementById("sales-chart");
+  const ctx = byId("sales-chart");
   if (!ctx) return;
 
-  // Destroy existing chart
+  // ✅ Guard: chỉ destroy nếu chart còn gắn vào DOM
   if (salesChart) {
-    salesChart.destroy();
+    try { salesChart.destroy(); } catch (e) {}
+    salesChart = null;
   }
 
-  const labels = data.map(item => item.date_label);
-  const revenues = data.map(item => item.revenue);
-  const orders = data.map(item => item.orders);
+  if (!data.length) return;
 
   salesChart = new Chart(ctx, {
-    type: "line",
+    type: "bar",
     data: {
-      labels: labels,
-      datasets: [
-        {
-          label: "Doanh thu (₫)",
-          data: revenues,
-          borderColor: "rgb(59, 130, 246)",
-          backgroundColor: "rgba(59, 130, 246, 0.1)",
-          tension: 0.4,
-          yAxisID: "y"
-        },
-        {
-          label: "Số đơn hàng",
-          data: orders,
-          borderColor: "rgb(16, 185, 129)",
-          backgroundColor: "rgba(16, 185, 129, 0.1)",
-          tension: 0.4,
-          yAxisID: "y1"
-        }
-      ]
+      labels  : data.map(function(d) { return d.date_label; }),
+      datasets: [{
+        label          : "Doanh thu (₫)",
+        data           : data.map(function(d) { return d.revenue; }),
+        backgroundColor: "rgba(59,130,246,0.7)",
+        borderColor    : "rgb(59,130,246)",
+        borderWidth    : 1,
+        borderRadius   : 4
+      }]
     },
     options: {
-      responsive: true,
+      responsive         : true,
       maintainAspectRatio: false,
-      interaction: {
-        mode: "index",
-        intersect: false
-      },
       plugins: {
-        legend: {
-          position: "top"
-        },
+        legend : { display: false },
         tooltip: {
           callbacks: {
-            label: function(context) {
-              if (context.datasetIndex === 0) {
-                return "Doanh thu: " + formatPrice(context.parsed.y);
-              } else {
-                return "Số đơn: " + context.parsed.y;
-              }
+            label: function(ctx) {
+              return "Doanh thu: " + formatPrice(ctx.parsed.y) +
+                     "  |  Số đơn: " + (data[ctx.dataIndex]?.orders || 0);
             }
           }
         }
       },
       scales: {
         y: {
-          type: "linear",
-          display: true,
-          position: "left",
-          title: {
-            display: true,
-            text: "Doanh thu (₫)"
-          },
-          ticks: {
-            callback: function(value) {
-              return formatPrice(value);
-            }
-          }
-        },
-        y1: {
-          type: "linear",
-          display: true,
-          position: "right",
-          title: {
-            display: true,
-            text: "Số đơn hàng"
-          },
-          grid: {
-            drawOnChartArea: false
-          }
+          ticks: { callback: function(v) { return formatPrice(v); } },
+          grid : { color: "rgba(0,0,0,0.05)" }
         }
       }
     }
   });
 }
 
-function renderSalesTable(data, period) {
-  const tbody = byId("sales-report-table").querySelector("tbody");
-  
-  if (!data || data.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" class="muted">Không có dữ liệu</td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = data.map(item => {
-    const avgOrder = item.orders > 0 ? item.revenue / item.orders : 0;
-    return `
-      <tr>
-        <td>${item.date_label}</td>
-        <td class="text-center">${formatPrice(item.revenue)}</td>
-        <td class="text-center">${item.orders}</td>
-        <td class="text-center">${formatPrice(avgOrder)}</td>
-      </tr>
-    `;
-  }).join("");
+function renderSalesTable(data) {
+  renderTable("sales-tbody", data, [
+    { key: "date_label", label: "Kỳ" },
+    { key: "revenue",    label: "Doanh thu",   cls: "text-right",
+      render: function(d) { return escapeHtml(formatPrice(d.revenue)); } },
+    { key: "orders",     label: "Số đơn",      cls: "text-center",
+      render: function(d) { return escapeHtml(String(d.orders)); } },
+    { key: "avg",        label: "TB/đơn",       cls: "text-right",
+      render: function(d) {
+        const avg = d.orders > 0 ? d.revenue / d.orders : 0;
+        return escapeHtml(formatPrice(avg));
+      }
+    }
+  ], "Không có dữ liệu doanh thu");
 }
 
-// Set default dates (last 30 days)
+// ── Default dates (30 ngày gần nhất) ────────────────────────────────────────
+
 function setDefaultSalesDates() {
-  const today = new Date();
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(today.getDate() - 30);
-  
-  byId("sales-from-date").value = thirtyDaysAgo.toISOString().split("T")[0];
-  byId("sales-to-date").value = today.toISOString().split("T")[0];
+  const today        = new Date();
+  const thirtyAgo    = new Date();
+  thirtyAgo.setDate(today.getDate() - 30);
+  const fmt = function(d) { return d.toISOString().split("T")[0]; };
+
+  const elFrom = byId("sales-from-date");
+  const elTo   = byId("sales-to-date");
+  if (elFrom && !elFrom.value) elFrom.value = fmt(thirtyAgo);
+  if (elTo   && !elTo.value)   elTo.value   = fmt(today);
 }
 
-// Event listeners
-byId("btn-load-sales").addEventListener("click", () => {
-  apiCallWithLoading(loadSalesReport, "Đang tải báo cáo doanh thu...");
-});
+// =============================================================================
+// 3. Sản phẩm bán chạy
+// =============================================================================
 
-byId("sales-period").addEventListener("change", () => {
-  // Auto load when period changes
-  if (session.token) {
-    apiCallWithLoading(loadSalesReport, "Đang tải báo cáo doanh thu...");
+async function loadTopProducts() {
+  const fromDate = byId("top-from-date")?.value || "";
+  const toDate   = byId("top-to-date")?.value   || "";
+
+  try {
+    const cacheKey = CacheManager.key("reports", "top_products", fromDate || "all", toDate || "all");
+    const data     = await fetchReport(cacheKey, "reports.top_products", {
+      from_date: fromDate || null,
+      to_date  : toDate   || null,
+      limit    : 20
+    });
+
+    byId("top-total-revenue").textContent = formatPrice(data.total_revenue || 0);
+    renderTopProducts(data.items || []);
+  } catch (err) {
+    handleError(err, "top_products");
+  }
+}
+
+function renderTopProducts(items) {
+  renderTable("top-products-tbody", items, [
+    { key: "rank",        label: "#",          cls: "text-center",
+      render: function(item, idx) { return escapeHtml(String(items.indexOf(item) + 1)); }
+    },
+    { key: "name",        label: "Sản phẩm",
+      render: function(d) { return escapeHtml(d.name); }
+    },
+    { key: "qty_sold",    label: "SL bán",     cls: "text-center",
+      render: function(d) { return escapeHtml(String(d.qty_sold)); }
+    },
+    { key: "order_count", label: "Số đơn",     cls: "text-center",
+      render: function(d) { return escapeHtml(String(d.order_count)); }
+    },
+    { key: "revenue",     label: "Doanh thu",  cls: "text-right",
+      render: function(d) { return escapeHtml(formatPrice(d.revenue)); }
+    },
+    { key: "revenue_pct", label: "% DT",       cls: "text-center",
+      render: function(d) {
+        return '<span class="pct-bar" style="--pct:' + escapeHtml(String(d.revenue_pct)) + '%">' +
+               escapeHtml(String(d.revenue_pct)) + "%</span>";
+      }
+    }
+  ], "Chưa có dữ liệu bán hàng");
+}
+
+// =============================================================================
+// 4. Tồn kho & cảnh báo
+// =============================================================================
+
+async function loadStockAlert() {
+  const threshold = byId("stock-threshold")?.value || 10;
+
+  try {
+    const cacheKey = CacheManager.key("reports", "stock_alert", threshold);
+    const data     = await fetchReport(cacheKey, "reports.stock_alert", { threshold });
+
+    byId("stock-out-count").textContent = data.out_count || 0;
+    byId("stock-low-count").textContent = data.low_count || 0;
+    byId("stock-grand-total").textContent = formatPrice(data.grand_total || 0);
+    renderStockAlert(data.items || []);
+  } catch (err) {
+    handleError(err, "stock_alert");
+  }
+}
+
+const STATUS_LABEL = { OK: "✅ Đủ hàng", LOW: "⚠️ Sắp hết", OUT: "🔴 Hết hàng" };
+const STATUS_CLS   = { OK: "status-ok",   LOW: "status-low",  OUT: "status-out" };
+
+function renderStockAlert(items) {
+  renderTable("stock-tbody", items, [
+    { key: "name",        label: "Sản phẩm",
+      render: function(d) { return escapeHtml(d.name); }
+    },
+    { key: "stock",       label: "Tồn kho",    cls: "text-center",
+      render: function(d) { return escapeHtml(String(d.stock)); }
+    },
+    { key: "in_value",    label: "Giá trị nhập", cls: "text-right",
+      render: function(d) { return escapeHtml(formatPrice(d.in_value)); }
+    },
+    { key: "out_value",   label: "Giá trị xuất", cls: "text-right",
+      render: function(d) { return escapeHtml(formatPrice(d.out_value)); }
+    },
+    { key: "stock_value", label: "Giá trị tồn", cls: "text-right",
+      render: function(d) { return "<strong>" + escapeHtml(formatPrice(d.stock_value)) + "</strong>"; }
+    },
+    { key: "status",      label: "Trạng thái",  cls: "text-center",
+      render: function(d) {
+        return '<span class="' + escapeHtml(STATUS_CLS[d.status] || "") + '">' +
+               escapeHtml(STATUS_LABEL[d.status] || d.status) + "</span>";
+      }
+    }
+  ], "Chưa có dữ liệu tồn kho");
+}
+
+// =============================================================================
+// Init & event listeners
+// =============================================================================
+
+async function loadAllReports() {
+  return apiCallWithLoading(async function() {
+    setDefaultSalesDates();
+
+    // ✅ Promise.allSettled: sections độc lập, 1 section lỗi không block section khác
+    const results = await Promise.allSettled([
+      loadDashboard(),
+      loadSales(),
+      loadTopProducts(),
+      loadStockAlert()
+    ]);
+
+    results.forEach(function(r, i) {
+      if (r.status === "rejected") {
+        const names = ["dashboard", "sales", "top_products", "stock_alert"];
+        console.warn("Section [" + names[i] + "] failed:", r.reason?.message);
+      }
+    });
+  }, "Đang tải báo cáo...");
+}
+
+// ── Login ────────────────────────────────────────────────────────────────────
+
+byId("btn-login")?.addEventListener("click", async function() {
+  const btn = byId("btn-login");
+  Loading.button(btn, true);
+  try {
+    await login();
+    await loadAllReports();
+  } catch (err) {
+    handleError(err, "login");
+  } finally {
+    Loading.button(btn, false);
   }
 });
 
-// Initialize WorkerAPI if configured
-if (window.WorkerAPI && window.CommonUtils && window.CommonUtils.WORKER_URL) {
-  WorkerAPI.init(window.CommonUtils.WORKER_URL);
-  console.log("✅ WorkerAPI initialized for READ operations");
-} else if (window.WorkerAPI) {
-  console.log("ℹ️ WorkerAPI available but WORKER_URL not configured. Using GAS only.");
+// ── Logout ───────────────────────────────────────────────────────────────────
+
+byId("btn-logout")?.addEventListener("click", function() {
+  resetSession();
+  window.location.reload();
+});
+
+// ── Sales: filter ─────────────────────────────────────────────────────────────
+
+// Debounce để tránh double-fire khi bấm nút + đổi period cùng lúc
+let _salesDebounce = null;
+function debouncedLoadSales() {
+  clearTimeout(_salesDebounce);
+  _salesDebounce = setTimeout(function() {
+    if (!session.token) return;
+    apiCallWithLoading(loadSales, "Đang tải doanh thu...");
+  }, 120);
 }
 
+byId("btn-load-sales")?.addEventListener("click", debouncedLoadSales);
+byId("sales-period")?.addEventListener("change", debouncedLoadSales);
+
+// ── Top products: filter ──────────────────────────────────────────────────────
+
+byId("btn-load-top")?.addEventListener("click", function() {
+  if (!session.token) return;
+  apiCallWithLoading(loadTopProducts, "Đang tải sản phẩm bán chạy...");
+});
+
+// ── Stock: filter ─────────────────────────────────────────────────────────────
+
+byId("btn-load-stock")?.addEventListener("click", function() {
+  if (!session.token) return;
+  apiCallWithLoading(loadStockAlert, "Đang tải tồn kho...");
+});
+
+// ── Auto-load nếu đã đăng nhập ───────────────────────────────────────────────
+
+reloadSession();
 syncInputsFromSession();
 applyQueryParams_();
 updateSessionUI();
+
 if (session.token) {
-  setDefaultSalesDates();
-  loadAllReports().catch(err => {
-    alert(err.message);
-    resetSession();
-  });
+  loadAllReports().catch(function(err) { handleError(err, "init"); });
 }

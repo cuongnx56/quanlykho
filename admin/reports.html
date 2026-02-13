@@ -11,7 +11,7 @@
 </head>
 <body>
 
-<!-- Sidebar Navigation - Loaded from sidebar.html -->
+<!-- Sidebar -->
 <div id="sidebar-container"></div>
 <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-label="Toggle menu">☰</button>
 
@@ -26,6 +26,8 @@
 </header>
 
 <main class="container">
+
+  <!-- ── Đăng nhập ──────────────────────────────────────────────── -->
   <section class="card" id="login-section">
     <h2>Đăng nhập quản trị</h2>
     <div class="grid">
@@ -45,172 +47,185 @@
     <button id="btn-login">Đăng nhập</button>
   </section>
 
-  <!-- Dashboard Tổng quan -->
+  <!-- ══════════════════════════════════════════════════════════════
+       1. DASHBOARD HÔM NAY
+  ══════════════════════════════════════════════════════════════ -->
   <section class="card">
-    <h2>📈 Tổng quan</h2>
+    <h2>📈 Tổng quan hôm nay</h2>
     <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-value" id="total-products">-</div>
-        <div class="stat-label">Tổng sản phẩm</div>
+
+      <div class="stat-card accent">
+        <div class="stat-value" id="today-revenue">—</div>
+        <div class="stat-label">Doanh thu hôm nay</div>
       </div>
+
       <div class="stat-card">
-        <div class="stat-value" id="total-stock">-</div>
-        <div class="stat-label">Tổng tồn kho</div>
+        <div class="stat-value" id="today-orders">—</div>
+        <div class="stat-label">Đơn hoàn thành hôm nay</div>
       </div>
-      <div class="stat-card">
-        <div class="stat-value" id="total-value">-</div>
-        <div class="stat-label">Giá trị tồn kho</div>
+
+      <div class="stat-card warning">
+        <div class="stat-value" id="pending-orders">—</div>
+        <div class="stat-label">Đơn chờ xử lý</div>
       </div>
+
       <div class="stat-card alert">
-        <div class="stat-value" id="low-stock-count">-</div>
-        <div class="stat-label">Sản phẩm sắp hết</div>
+        <div class="stat-value" id="low-stock-count">—</div>
+        <div class="stat-label">Sản phẩm sắp / hết hàng</div>
       </div>
+
     </div>
   </section>
 
-  <!-- Hàng sắp hết -->
+  <!-- ══════════════════════════════════════════════════════════════
+       2. DOANH THU
+  ══════════════════════════════════════════════════════════════ -->
   <section class="card">
     <div class="card-header">
-      <h2>⚠️ Hàng sắp hết (≤ 10)</h2>
-      <div class="filter-group">
-        <label>Ngưỡng:</label>
-        <input id="threshold" type="number" value="10" min="0" style="width: 80px;">
-        <button id="btn-refresh-low-stock" class="btn-small">Làm mới</button>
+      <h2>💰 Doanh thu theo thời gian</h2>
+    </div>
+
+    <div class="filter-group">
+      <label>Nhóm theo:</label>
+      <select id="sales-period">
+        <option value="day">Ngày</option>
+        <option value="week">Tuần</option>
+        <option value="month" selected>Tháng</option>
+      </select>
+      <label>Từ:</label>
+      <input id="sales-from-date" type="date">
+      <label>Đến:</label>
+      <input id="sales-to-date" type="date">
+      <button id="btn-load-sales" class="btn-small">Tải báo cáo</button>
+    </div>
+
+    <div class="sales-summary">
+      <div class="summary-item">
+        <div class="summary-label">Tổng doanh thu</div>
+        <div class="summary-value" id="sales-total-revenue">—</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">Tổng đơn hàng</div>
+        <div class="summary-value" id="sales-total-orders">—</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">Giá trị đơn TB</div>
+        <div class="summary-value" id="sales-avg-order">—</div>
       </div>
     </div>
+
+    <div class="chart-container">
+      <canvas id="sales-chart"></canvas>
+    </div>
+
     <div class="table-wrap">
-      <table id="low-stock-table">
+      <table>
         <thead>
           <tr>
-            <th>ID</th>
-            <th>Title</th>
-            <th class="text-center">Tồn</th>
-            <th class="text-center">Giá</th>
+            <th>Kỳ</th>
+            <th class="text-right">Doanh thu</th>
+            <th class="text-center">Số đơn</th>
+            <th class="text-right">TB / đơn</th>
           </tr>
         </thead>
-        <tbody>
-          <tr><td colspan="4" class="muted">Đăng nhập để tải dữ liệu...</td></tr>
+        <tbody id="sales-tbody">
+          <tr><td colspan="4" class="muted">Chọn khoảng thời gian và nhấn "Tải báo cáo"</td></tr>
         </tbody>
       </table>
     </div>
   </section>
 
-  <!-- Giá trị tồn kho -->
+  <!-- ══════════════════════════════════════════════════════════════
+       3. SẢN PHẨM BÁN CHẠY
+  ══════════════════════════════════════════════════════════════ -->
   <section class="card">
     <div class="card-header">
-      <h2>💰 Giá trị tồn kho chi tiết</h2>
-      <div class="summary-total">
-        Tổng cộng: <strong id="grand-total">-</strong>
+      <h2>🏆 Sản phẩm bán chạy</h2>
+    </div>
+
+    <div class="filter-group">
+      <label>Từ:</label>
+      <input id="top-from-date" type="date">
+      <label>Đến:</label>
+      <input id="top-to-date" type="date">
+      <button id="btn-load-top" class="btn-small">Tải báo cáo</button>
+    </div>
+
+    <div class="sales-summary">
+      <div class="summary-item">
+        <div class="summary-label">Tổng doanh thu (top 20)</div>
+        <div class="summary-value" id="top-total-revenue">—</div>
       </div>
     </div>
+
     <div class="table-wrap">
-      <table id="stock-value-table" class="detail-table">
+      <table>
         <thead>
           <tr>
-            <th>ID</th>
-            <th>Title</th>
-            <th class="text-center">Tồn hiện tại</th>
-            <th class="text-center">Giá trị nhập</th>
-            <th class="text-center">Giá trị xuất</th>
-            <th class="text-center">Giá trị tồn</th>
-            <th class="text-center">Chi tiết</th>
+            <th class="text-center">#</th>
+            <th>Sản phẩm</th>
+            <th class="text-center">SL bán</th>
+            <th class="text-center">Số đơn</th>
+            <th class="text-right">Doanh thu</th>
+            <th class="text-center">% DT</th>
           </tr>
         </thead>
-        <tbody>
-          <tr><td colspan="7" class="muted">Đăng nhập để tải dữ liệu...</td></tr>
+        <tbody id="top-products-tbody">
+          <tr><td colspan="6" class="muted">Chọn khoảng thời gian và nhấn "Tải báo cáo"</td></tr>
         </tbody>
       </table>
     </div>
   </section>
 
-  <!-- Báo cáo nhập xuất tồn -->
+  <!-- ══════════════════════════════════════════════════════════════
+       4. TỒN KHO & CẢNH BÁO
+  ══════════════════════════════════════════════════════════════ -->
   <section class="card">
     <div class="card-header">
-      <h2>📦 Báo cáo nhập - xuất - tồn</h2>
-      <div class="filter-group">
-        <label>Từ:</label>
-        <input id="from-date" type="date">
-        <label>Đến:</label>
-        <input id="to-date" type="date">
-        <button id="btn-filter-movement" class="btn-small">Lọc</button>
+      <h2>📦 Tồn kho & Cảnh báo</h2>
+      <div class="card-actions">
+        <div class="filter-group">
+          <label>Ngưỡng cảnh báo (≤):</label>
+          <input id="stock-threshold" type="number" value="10" min="0" class="input-narrow">
+          <button id="btn-load-stock" class="btn-small">Làm mới</button>
+        </div>
       </div>
     </div>
+
+    <div class="stats-grid stats-grid--3">
+      <div class="stat-card alert">
+        <div class="stat-value" id="stock-out-count">—</div>
+        <div class="stat-label">Hết hàng (= 0)</div>
+      </div>
+      <div class="stat-card warning">
+        <div class="stat-value" id="stock-low-count">—</div>
+        <div class="stat-label">Sắp hết (≤ ngưỡng)</div>
+      </div>
+      <div class="stat-card accent">
+        <div class="stat-value" id="stock-grand-total">—</div>
+        <div class="stat-label">Tổng giá trị tồn kho</div>
+      </div>
+    </div>
+
     <div class="table-wrap">
-      <table id="movement-report-table">
+      <table>
         <thead>
           <tr>
-            <th>Product ID</th>
-            <th class="text-center">Nhập (SL)</th>
-            <th class="text-center">Nhập (Giá trị)</th>
-            <th class="text-center">Xuất (SL)</th>
-            <th class="text-center">Xuất (Giá trị)</th>
-            <th class="text-center">Điều chỉnh</th>
+            <th>Sản phẩm</th>
+            <th class="text-center">Tồn kho</th>
+            <th class="text-right">Giá trị nhập</th>
+            <th class="text-right">Giá trị xuất</th>
+            <th class="text-right">Giá trị tồn</th>
+            <th class="text-center">Trạng thái</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="stock-tbody">
           <tr><td colspan="6" class="muted">Đăng nhập để tải dữ liệu...</td></tr>
         </tbody>
       </table>
     </div>
   </section>
 
-  <!-- Báo cáo doanh thu -->
-  <section class="card">
-    <div class="card-header">
-      <h2>💰 Báo cáo doanh thu</h2>
-      <div class="filter-group">
-        <label>Nhóm theo:</label>
-        <select id="sales-period" style="width: 120px;">
-          <option value="day">Ngày</option>
-          <option value="week">Tuần</option>
-          <option value="month" selected>Tháng</option>
-        </select>
-        <label>Từ:</label>
-        <input id="sales-from-date" type="date">
-        <label>Đến:</label>
-        <input id="sales-to-date" type="date">
-        <button id="btn-load-sales" class="btn-small">Tải báo cáo</button>
-      </div>
-    </div>
-    
-    <!-- Summary Stats -->
-    <div class="sales-summary">
-      <div class="summary-item">
-        <div class="summary-label">Tổng doanh thu</div>
-        <div class="summary-value" id="sales-total-revenue">-</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-label">Tổng đơn hàng</div>
-        <div class="summary-value" id="sales-total-orders">-</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-label">Giá trị đơn TB</div>
-        <div class="summary-value" id="sales-avg-order">-</div>
-      </div>
-    </div>
-
-    <!-- Chart -->
-    <div class="chart-container">
-      <canvas id="sales-chart"></canvas>
-    </div>
-
-    <!-- Table -->
-    <div class="table-wrap">
-      <table id="sales-report-table">
-        <thead>
-          <tr>
-            <th>Thời gian</th>
-            <th class="text-center">Doanh thu</th>
-            <th class="text-center">Số đơn hàng</th>
-            <th class="text-center">Giá trị đơn TB</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td colspan="4" class="muted">Chọn period và nhấn "Tải báo cáo" để xem dữ liệu...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -218,32 +233,19 @@
 <script src="auth.js"></script>
 <script src="cache.js"></script>
 <script src="common.js"></script>
-<script src="worker-api.js"></script>
 <script>
-  // Load sidebar HTML from sidebar.html
   (function() {
     fetch('sidebar.html')
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Failed to load sidebar');
-        }
-        return response.text();
-      })
-      .then(html => {
+      .then(function(r) { return r.ok ? r.text() : Promise.reject(r.status); })
+      .then(function(html) {
         document.getElementById('sidebar-container').innerHTML = html;
-        // Initialize sidebar after loading
-        const script = document.createElement('script');
-        script.src = 'sidebar.js';
-        script.onload = function() {
-          console.log('✅ Sidebar loaded and initialized');
-        };
-        document.body.appendChild(script);
+        var s = document.createElement('script');
+        s.src = 'sidebar.js';
+        document.body.appendChild(s);
       })
-      .catch(err => {
-        console.error('❌ Error loading sidebar:', err);
-        // Fallback: show error message
-        document.getElementById('sidebar-container').innerHTML = 
-          '<div style="padding: 20px; color: #ef4444;">Error loading sidebar</div>';
+      .catch(function() {
+        document.getElementById('sidebar-container').innerHTML =
+          '<div style="padding:20px;color:#ef4444">Error loading sidebar</div>';
       });
   })();
 </script>
