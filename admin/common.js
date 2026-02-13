@@ -66,7 +66,12 @@ const SessionCache = (() => {
   return {
     load() {
       const now = Date.now();
-      if (_cached && (now - _lastCheck) < TTL) return _cached;
+      // If cache was filled before auth.js ran (no token), re-read from storage when AuthSession is now available
+      const cacheHasNoAuth = !_cached || !_cached.token;
+      const authAvailable  = typeof window.AuthSession !== "undefined";
+      if (_cached && (now - _lastCheck) < TTL && !(cacheHasNoAuth && authAvailable)) {
+        return _cached;
+      }
 
       _cached    = window.AuthSession
         ? window.AuthSession.load(sessionDefaults)

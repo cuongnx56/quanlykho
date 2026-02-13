@@ -56,11 +56,11 @@ function formatDate(date) {
 function renderLeads() {
   const tbody = byId("leads-table").querySelector("tbody");
   if (!session.token) {
-    tbody.innerHTML = `<tr><td colspan="8" class="muted">Đăng nhập để tải dữ liệu...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="muted">Đăng nhập để tải dữ liệu...</td></tr>`;
     return;
   }
   if (!leads.length) {
-    tbody.innerHTML = `<tr><td colspan="8" class="muted">Chưa có leads</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="muted">Chưa có leads</td></tr>`;
     return;
   }
 
@@ -72,8 +72,6 @@ function renderLeads() {
         <td>${l.name ?? ""}</td>
         <td>${l.phone ?? ""}</td>
         <td>${l.email ?? ""}</td>
-        <td>${l.source ?? ""}</td>
-        <td>${l.status ?? ""}</td>
         <td>${l.note ?? ""}</td>
         <td>${createdAt}</td>
       </tr>

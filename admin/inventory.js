@@ -461,20 +461,45 @@ function renderDropdownItems(items) {
 
 /**
  * initProductSearch – set up search input + dropdown.
- * ✅ AbortController: idempotent, safe to call on every renderProductOptions().
+ *
+ * ✅ AbortController (listeners): idempotent, safe to re-call on every
+ *    renderProductOptions(). Aborting clears ALL listeners attached with
+ *    { signal } — no manual removeEventListener needed.
+ *
+ * ✅ AbortController (Worker search call): each new keystroke cancels the
+ *    in-flight Worker fetch from the *previous* keystroke.  Without this,
+ *    a slow Worker response from keystroke N-1 can overwrite the results
+ *    of a faster keystroke N (classic race condition).
+ *
+ * ✅ document "click" outside listener: tracked in module-level variable
+ *    so it is removed before re-adding.  Using { signal } on document
+ *    listeners alone is NOT enough because the signal controller belongs to
+ *    the searchInput — aborting it doesn't cleanly remove the document
+ *    listener in all browsers when initProductSearch() is called rapidly.
  */
+
+// Module-level handle for the document outside-click listener so we can
+// remove it before adding a new one each time initProductSearch() runs.
+let _outsideClickHandler = null;
+
 function initProductSearch() {
   const searchInput = byId("product_search");
   const dropdown    = byId("product_dropdown");
   if (!searchInput || !dropdown) return;
 
-  // Abort and replace previous listeners
+  // ── Abort previous input/keyboard/blur listeners ─────────────────────────
   searchInput._productSearchController?.abort();
   const controller = new AbortController();
   searchInput._productSearchController = controller;
   const signal = controller.signal;
 
-  // ── Delegated click on dropdown ──────────────────────────────────────────
+  // ── Remove stale document outside-click listener ──────────────────────────
+  if (_outsideClickHandler) {
+    document.removeEventListener("click", _outsideClickHandler);
+    _outsideClickHandler = null;
+  }
+
+  // ── Delegated click on dropdown ───────────────────────────────────────────
   if (dropdown._delegatedClick) {
     dropdown.removeEventListener("click", dropdown._delegatedClick);
   }
@@ -484,36 +509,94 @@ function initProductSearch() {
   };
   dropdown.addEventListener("click", dropdown._delegatedClick);
 
-  // ── Debounced search: Worker API by ID when configured, else local filter ──
-  let debounceTimer;
-  async function doSearch(term) {
+  // ── Debounced search with per-call AbortController ────────────────────────
+  //
+  // Flow:
+  //   1. User types → 300 ms debounce starts
+  //   2. Previous in-flight Worker call (if any) is aborted immediately
+  //   3. After 300 ms:
+  //      a. Try Worker /products?search=term  (cancel on next keystroke)
+  //      b. Fallback: local summaryMap filter (instant, no network)
+  //
+  let debounceTimer      = null;
+  let searchCallCtrl     = null;   // AbortController for the current Worker search call
+
+  function cancelPendingSearch() {
     clearTimeout(debounceTimer);
+    debounceTimer = null;
+    if (searchCallCtrl) {
+      searchCallCtrl.abort();
+      searchCallCtrl = null;
+    }
+  }
+
+  async function executeSearch(term) {
+    const loadingEl = byId("product_loading");
+    // Create a fresh controller for this specific call
+    searchCallCtrl = new AbortController();
+    const callSignal = searchCallCtrl.signal;
+
+    try {
+      if (loadingEl) loadingEl.style.display = "inline-block";
+
+      let items = [];
+
+      // ── Worker search (/products?search=term) ──────────────────────────
+      if (WorkerAPI?.isConfigured()) {
+        try {
+          const result = await WorkerAPI.call("/products", {
+            search : term,
+            limit  : 20,
+          });
+          // If this call was aborted by the next keystroke, discard silently
+          if (!callSignal.aborted) {
+            items = result?.items ?? (Array.isArray(result) ? result : []);
+          }
+        } catch (err) {
+          if (!callSignal.aborted) {
+            console.warn("⚠️ Worker search failed, using local filter:", err?.message);
+          }
+        }
+      }
+
+      // ── Local fallback: filter summaryMap ─────────────────────────────
+      if (items.length === 0 && !callSignal.aborted) {
+        items = searchProductId(term).map(id => summaryMap.get(id) || { id });
+      }
+
+      // Only render if this call was not superseded by a newer one
+      if (!callSignal.aborted) {
+        renderDropdownItems(items);
+      }
+    } catch (err) {
+      if (!callSignal.aborted) {
+        console.error("⚠️ executeSearch error:", err);
+        // Fallback silently to local filter
+        const items = searchProductId(term).map(id => summaryMap.get(id) || { id });
+        renderDropdownItems(items);
+      }
+    } finally {
+      if (!callSignal.aborted && loadingEl) {
+        loadingEl.style.display = "none";
+      }
+    }
+  }
+
+  function doSearch(term) {
+    // Cancel both timer and any in-flight request
+    cancelPendingSearch();
+
     if (!term) {
       renderDropdownItems(summary);
       return;
     }
-    debounceTimer = setTimeout(async () => {
-      const loadingEl = byId("product_loading");
-      if (loadingEl) loadingEl.style.display = "inline-block";
 
-      let items = [];
-      if (window.WorkerAPI?.isConfigured?.()) {
-        try {
-          const result = await WorkerAPI.call("/products", { search: term });
-          items = result?.items ?? (Array.isArray(result) ? result : []);
-        } catch (err) {
-          console.warn("⚠️ Worker product search failed, using local filter:", err?.message);
-        }
-      }
-      if (items.length === 0) {
-        items = searchProductId(term).map(id => summaryMap.get(id) || { id });
-      }
-
-      if (loadingEl) loadingEl.style.display = "none";
-      renderDropdownItems(items);
+    debounceTimer = setTimeout(() => {
+      executeSearch(term);
     }, 300);
   }
 
+  // ── Input listeners ───────────────────────────────────────────────────────
   searchInput.addEventListener("input", function () {
     doSearch(this.value.trim());
   }, { signal });
@@ -531,25 +614,40 @@ function initProductSearch() {
   searchInput.addEventListener("keydown", async function (e) {
     if (e.key === "Enter") {
       e.preventDefault();
+      // Cancel pending search — user committed to whatever is shown
+      cancelPendingSearch();
       const first = dropdown.querySelector(".dropdown-item[data-product-id]");
       if (first) await selectProductFromDropdown(first.dataset.productId);
     } else if (e.key === "Escape") {
+      cancelPendingSearch();
       dropdown.style.display = "none";
     }
   }, { signal });
 
   searchInput.addEventListener("blur", () => {
-    // Delay so delegated click fires before hide
+    // Delay so delegated dropdown click fires before hide
     setTimeout(() => { dropdown.style.display = "none"; }, 200);
   }, { signal });
 
-  document.addEventListener("click", (e) => {
+  // ── Outside-click: tracked explicitly to avoid duplicates ────────────────
+  _outsideClickHandler = (e) => {
     if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
       dropdown.style.display = "none";
     }
-  }, { signal });
+  };
+  document.addEventListener("click", _outsideClickHandler);
 
-  // ── Movement type change: re-price using cached product (no network) ──────
+  // When the search controller is aborted (initProductSearch called again),
+  // also remove the document listener automatically.
+  signal.addEventListener("abort", () => {
+    if (_outsideClickHandler) {
+      document.removeEventListener("click", _outsideClickHandler);
+      _outsideClickHandler = null;
+    }
+    cancelPendingSearch();
+  });
+
+  // ── Movement type change: re-price from cache, zero network ──────────────
   byId("movement_type")?.addEventListener("change", async function () {
     const productId = byId("product_id")?.value;
     if (productId) await fillFormFromProduct(productId);
