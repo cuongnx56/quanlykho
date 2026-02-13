@@ -39,14 +39,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     loadSettings(); // Reload to reset form
   });
   
-  // Initialize WorkerAPI if configured
-  if (window.WorkerAPI && window.CommonUtils && window.CommonUtils.WORKER_URL) {
-    WorkerAPI.init(window.CommonUtils.WORKER_URL);
-    console.log("✅ WorkerAPI initialized for READ operations");
-  } else if (window.WorkerAPI) {
-    console.log("ℹ️ WorkerAPI available but WORKER_URL not configured. Using GAS only.");
-  }
-  
   // Load settings if already logged in
   if (session.token && session.apiKey) {
     await loadSettings();
@@ -77,25 +69,7 @@ async function loadSettings() {
       return;
     }
     
-    // ✅ Step 2: Try Cloudflare Worker first (fast, edge network)
-    if (WorkerAPI && WorkerAPI.isConfigured()) {
-      try {
-        console.log("🚀 Trying Cloudflare Worker for settings.list...");
-        const result = await WorkerAPI.settingsList();
-        
-        if (result && result.data) {
-          console.log("✅ Worker cache HIT! Loaded from Cloudflare KV");
-          settings = result.data;
-        } else {
-          console.log("⚠️ Worker cache MISS, falling back to GAS");
-        }
-      } catch (error) {
-        console.error("⚠️ Worker error:", error);
-        console.log("Falling back to GAS...");
-      }
-    }
-    
-    // ✅ Step 3: Fallback to GAS if Worker fails or cache miss
+    // ✅ Step 2: Fallback to GAS if cache miss
     if (!settings) {
       console.log("📡 Fetching from GAS /exec endpoint...");
       settings = await apiCall("settings.list", {
