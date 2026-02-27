@@ -654,51 +654,86 @@ async function saveProduct() {
     data["amount_in_stock"] = Number(data["amount_in_stock"]);
   }
 
-  let savedProduct;
-  try {
-    if (editMode === "create") {
-      data.token = session.token;
-      savedProduct = await apiCall("products.create", data);
-    } else {
-      data.token = session.token;
-      savedProduct = await apiCall("products.update", data);
-    }
+  // ── Capture state before going async ────────────────────────────────────────
+  const capturedMode        = editMode;
+  const existingProduct     = capturedMode === "edit"
+    ? (products.find(p => p.id === data.id) || null)
+    : null;
+  const optimisticProduct   = _buildOptimisticProduct(data, existingProduct);
 
-    // ✅ Clear ALL cache after write action (create/update)
-    CacheManager.clearAllCache();
-    
-    // ✅ Also invalidate specific caches to be thorough
-    CacheManager.invalidateOnProductChange();
-    
-    closeModal();
-    clearForm();
-    
-    // ✅ Update UI directly instead of reloading
-    if (editMode === "create") {
-      // Add new product to current page if on page 1, otherwise reload
-      if (currentPage === 1 && products.length < itemsPerPage) {
-        addProductToList(savedProduct);
-        totalProducts++;
+  // ── Optimistic UI: close modal + update list immediately ────────────────────
+  CacheManager.clearAllCache();
+  CacheManager.invalidateOnProductChange();
+
+  closeModal();
+  clearForm();
+
+  let addedOptimistically = false;
+  if (capturedMode === "create") {
+    if (currentPage === 1 && products.length < itemsPerPage) {
+      addProductToList(optimisticProduct);
+      totalProducts++;
+      totalPages = Math.ceil(totalProducts / itemsPerPage);
+      renderPagination();
+      addedOptimistically = true;
+    }
+  } else {
+    updateProductInList(optimisticProduct);
+  }
+
+  // ── Background GAS call — user no longer waits ──────────────────────────────
+  Toast.show("Đang lưu...", "info", 0);
+
+  data.token = session.token;
+  const gasAction = capturedMode === "create" ? "products.create" : "products.update";
+
+  apiCall(gasAction, data)
+    .then(savedProduct => {
+      // Replace optimistic row with real server data
+      updateProductInList(savedProduct);
+
+      // If create and product couldn't be shown optimistically, reload now
+      if (capturedMode === "create" && !addedOptimistically) {
+        loadProducts(currentPage);
+      }
+
+      Toast.show("✓ Đã lưu thành công", "success", 2500);
+    })
+    .catch(err => {
+      // ── Rollback optimistic update ────────────────────────────────────────
+      if (capturedMode === "create" && addedOptimistically) {
+        removeProductFromList(optimisticProduct.id);
+        totalProducts = Math.max(0, totalProducts - 1);
         totalPages = Math.ceil(totalProducts / itemsPerPage);
         renderPagination();
-      } else {
-        await loadProducts(currentPage);
+      } else if (capturedMode === "edit" && existingProduct) {
+        updateProductInList(existingProduct);
       }
-    } else {
-      // Update existing product in list
-      updateProductInList(savedProduct);
-    }
-  } catch (err) {
-    // ✅ Handle token expiration - prompt user to login again
-    if (err.message && (err.message.includes("Token expired") || err.message.includes("Unauthorized") || err.message.includes("hết hạn"))) {
-      alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
-      resetSession();
-      window.location.reload();
-    } else {
-      alert("Lỗi: " + err.message);
-    }
-    throw err;
-  }
+
+      const msg = err.message || "Lỗi không xác định";
+      Toast.show("✗ Lỗi lưu: " + msg, "error", 6000);
+
+      if (msg.includes("AUTH_ERROR") || msg.includes("hết hạn") ||
+          msg.includes("Token expired") || msg.includes("Unauthorized")) {
+        setTimeout(() => {
+          alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+          resetSession();
+          window.location.reload();
+        }, 300);
+      }
+    });
+}
+
+/**
+ * Build a product object for immediate optimistic UI rendering.
+ * Merges existing product data (for edit) with the new form values.
+ */
+function _buildOptimisticProduct(formData, existingProduct) {
+  const product = Object.assign({}, existingProduct || {}, formData);
+  // Remove request-only fields
+  delete product.token;
+  delete product._category_new_name;
+  return product;
 }
 
 async function deleteProduct(productId) {
