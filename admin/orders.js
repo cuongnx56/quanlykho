@@ -22,7 +22,6 @@ const ORDERS_CONST = {
   DEBOUNCE_DELAY          : 300,   // ms debounce on customer input
   SEARCH_MIN_LENGTH       : 1,     // min chars before filtering
   CUSTOMERS_LIMIT         : 1000,  // keep existing behaviour for customers
-  CACHE_AFTER_WRITE_DELAY : 500,   // ms to wait after write before reload
 };
 
 // --------------- Page state -------------------------------------------------
@@ -41,6 +40,73 @@ let productsMap = null;
 
 // Pre-built customer search index for fast filtering
 let customerSearchIndex = [];
+
+// --------------- Cache helpers for optimistic writes -----------------------
+
+/**
+ * Insert or update an order in the current page's localStorage cache.
+ * - If cache exists: updates the matching entry (or prepends if new).
+ * - If cache does NOT exist: creates a fresh cache snapshot from the
+ *   current in-memory `orders` array so that a reload shows all visible
+ *   orders (including ones added/changed since the last full GAS fetch).
+ */
+function _cacheUpsertOrder(order) {
+  const key    = CacheManager.key("orders", "list", currentPage, itemsPerPage);
+  const cached = CacheManager.get(key);
+
+  if (!cached) {
+    // No existing cache — seed it from the current in-memory state.
+    if (!orders.length) return;
+    CacheManager.set(key, {
+      items      : [...orders],
+      total      : totalOrders,
+      page       : currentPage,
+      limit      : itemsPerPage,
+      totalPages,
+    });
+    return;
+  }
+
+  const items = Array.isArray(cached.items) ? [...cached.items] : [];
+  const idx   = items.findIndex(o => o.id === order.id);
+  if (idx !== -1) {
+    items[idx] = order;
+  } else {
+    items.unshift(order);
+    if (items.length > itemsPerPage) items.pop();
+  }
+  CacheManager.set(key, {
+    ...cached,
+    items,
+    total: idx === -1 ? (cached.total || 0) + 1 : cached.total,
+  });
+}
+
+/**
+ * Replace a temp order entry (by tempId) with the real saved order in cache.
+ */
+function _cacheReplaceOrder(tempId, savedOrder) {
+  const key    = CacheManager.key("orders", "list", 1, itemsPerPage);
+  const cached = CacheManager.get(key);
+  if (!cached || !Array.isArray(cached.items)) return;
+
+  const items = [...cached.items];
+  const idx   = items.findIndex(o => o.id === tempId);
+  if (idx !== -1) items[idx] = savedOrder;
+  CacheManager.set(key, { ...cached, items });
+}
+
+/**
+ * Remove an order from the page-1 localStorage cache (used on rollback).
+ */
+function _cacheRemoveOrder(orderId) {
+  const key    = CacheManager.key("orders", "list", 1, itemsPerPage);
+  const cached = CacheManager.get(key);
+  if (!cached || !Array.isArray(cached.items)) return;
+
+  const items = cached.items.filter(o => o.id !== orderId);
+  CacheManager.set(key, { ...cached, items, total: Math.max(0, (cached.total || 0) - 1) });
+}
 
 // --------------- Session override -------------------------------------------
 
@@ -713,7 +779,7 @@ function updateOrderInList(order) {
 
 // --------------- Actions ----------------------------------------------------
 
-async function changeStatus(orderId, newStatus) {
+function changeStatus(orderId, newStatus) {
   reloadSession();
 
   const confirmMsg = {
@@ -723,31 +789,61 @@ async function changeStatus(orderId, newStatus) {
   };
   if (!confirm(confirmMsg[newStatus])) return;
 
-  Loading.show("Đang cập nhật trạng thái...");
-  try {
-    const updatedOrder = await apiCall("orders.updateStatus", {
-      token      : session.token,
-      order_id   : orderId,
-      new_status : newStatus,
-    });
+  // ── Capture original order for rollback ────────────────────────────────
+  const originalOrder = orders.find(o => o.id === orderId);
+  if (!originalOrder) return;
 
-    // ✅ Granular: DONE/RETURN also touches inventory → clear products cache
-    if (newStatus === "DONE" || newStatus === "RETURN") {
-      CacheInvalidator.orderWithInventory();
-    } else {
-      CacheInvalidator.orders();
+  // ── Optimistic UI update ───────────────────────────────────────────────
+  const optimisticOrder = Object.assign({}, originalOrder, { status: newStatus });
+  updateOrderInList(optimisticOrder);
+  Toast.show("Đang cập nhật trạng thái...", "info", 0);
+
+  // ── Background GAS call (async IIFE) ───────────────────────────────────
+  (async () => {
+    let updatedOrder;
+    try {
+      updatedOrder = await apiCall("orders.updateStatus", {
+        token      : session.token,
+        order_id   : orderId,
+        new_status : newStatus,
+      });
+    } catch (err) {
+      const msg = err?.message || "Lỗi không xác định";
+
+      if (isNetworkOrResponseError(err)) {
+        // GAS may have already applied the change — don't rollback.
+        // Seed / update cache with the optimistic state and warn the user.
+        _cacheUpsertOrder(optimisticOrder);
+        Toast.show("⚠️ Mất kết nối — đang tải lại để kiểm tra trạng thái...", "info", 4000);
+        CacheInvalidator.products();
+        await loadData(currentPage);
+      } else {
+        // Logical API error → safe to rollback
+        updateOrderInList(originalOrder);
+        Toast.show(`✗ Lỗi cập nhật: ${msg}`, "error", 5000);
+        if (["Token expired", "Unauthorized", "hết hạn"].some(s => msg.includes(s))) {
+          setTimeout(() => { handleError(err, "changeStatus"); }, 300);
+        }
+      }
+      return;
     }
 
-    // Remove this page's orders cache so next full reload is fresh
-    CacheManager.remove(CacheManager.key("orders", "list", currentPage, itemsPerPage));
+    // ── Success: update order in cache in-place (no full cache clear) ────
+    // Normalize id field from response (API may return order_id or id)
+    const finalOrder = Object.assign({}, optimisticOrder, updatedOrder, {
+      id: String(updatedOrder.order_id ?? updatedOrder.id ?? orderId),
+    });
 
-    updateOrderInList(updatedOrder);
-    alert(`✅ Đã chuyển trạng thái sang ${newStatus}`);
-  } catch (err) {
-    handleError(err, "changeStatus");
-  } finally {
-    Loading.hide();
-  }
+    updateOrderInList(finalOrder);
+    _cacheUpsertOrder(finalOrder);
+
+    // DONE/RETURN also affects inventory → invalidate products/inventory only
+    if (newStatus === "DONE" || newStatus === "RETURN") {
+      CacheInvalidator.products();
+    }
+
+    Toast.show(`✓ Đã chuyển sang ${newStatus}`, "success", 2500);
+  })();
 }
 
 function viewOrder(orderId) {
@@ -1099,29 +1195,94 @@ async function saveOrder() {
   if (shippingZipcode)  shippingInfo.zipcode   = shippingZipcode;
   if (shippingNote)     shippingInfo.note      = shippingNote;
 
-  // ── Create order ──────────────────────────────────────────────────────
-  try {
-    await apiCall("orders.create", {
-      customer_id   : customerId,
-      items,
-      created_at    : orderDate,
-      shipping_info : JSON.stringify(shippingInfo),
-      note          : orderNote || undefined,
+  // ── Build optimistic order ────────────────────────────────────────────
+  const total = currentItems
+    .filter(Boolean)
+    .reduce((sum, item) => sum + item.qty * item.price, 0);
+
+  const tempId = "temp_" + Date.now();
+  const optimisticOrder = {
+    id            : tempId,
+    customer_id   : customerId,
+    items_json    : JSON.stringify(items),
+    total,
+    status        : "NEW",
+    created_at    : orderDate.replace("T", " ") + (orderDate.includes(":") && orderDate.split(":").length < 3 ? ":00" : ""),
+    shipping_info : JSON.stringify(shippingInfo),
+    note          : orderNote || "",
+  };
+
+  // ── Optimistic UI + cache: close modal, show row, write to localStorage ─
+  closeModal();
+  clearOrderForm();
+
+  orders.unshift(optimisticOrder);
+  renderOrders();
+
+  // Persist optimistic order into the page-1 localStorage cache so a
+  // browser refresh before GAS responds still shows it.
+  _cacheUpsertOrder(optimisticOrder);
+
+  Toast.show("Đang lưu đơn hàng...", "info", 0);
+
+  // ── Background GAS call ────────────────────────────────────────────────
+  (async () => {
+    let savedOrder;
+    try {
+      savedOrder = await apiCall("orders.create", {
+        customer_id   : customerId,
+        items,
+        created_at    : orderDate,
+        shipping_info : JSON.stringify(shippingInfo),
+        note          : orderNote || undefined,
+      });
+    } catch (err) {
+      const msg = err?.message || "Lỗi không xác định";
+
+      if (isNetworkOrResponseError(err)) {
+        // GAS may have already written to the Sheet — don't rollback.
+        // The optimistic row (already in memory + cache) stays visible.
+        Toast.show("⚠️ Mất kết nối — đơn hàng có thể đã được lưu.", "info", 5000);
+      } else {
+        // Logical API error → rollback optimistic row and cache entry
+        const idx = orders.findIndex(o => o.id === tempId);
+        if (idx !== -1) orders.splice(idx, 1);
+        _cacheRemoveOrder(tempId);
+        renderOrders();
+        Toast.show(`✗ Lỗi tạo đơn: ${msg}`, "error", 6000);
+        if (["Token expired", "Unauthorized", "hết hạn", "AUTH_ERROR"].some(s => msg.includes(s))) {
+          setTimeout(() => { handleError(err, "saveOrder"); }, 300);
+        }
+      }
+      return;
+    }
+
+    // ── API succeeded: merge response into optimistic order ──────────
+    // Response only contains { order_id, total } — merge with the full
+    // optimistic object so we keep all fields (items_json, shipping_info…).
+    const realId = savedOrder.order_id ?? savedOrder.id;
+    const realOrder = Object.assign({}, optimisticOrder, {
+      id    : String(realId),
+      total : savedOrder.total ?? optimisticOrder.total,
     });
 
-    // ✅ Granular invalidation: orders + customers (new customer might exist)
-    CacheInvalidator.afterCreateOrder();
+    // Replace temp entry in memory
+    const idx = orders.findIndex(o => o.id === tempId);
+    if (idx !== -1) orders[idx] = realOrder;
 
-    closeModal();
-    clearOrderForm();
+    // Patch the temp row's data-order-id to the real ID so updateOrderInList
+    // can find it, then re-render its innerHTML with correct button callbacks.
+    const tempRow = byId("orders-table")
+      .querySelector(`tbody tr[data-order-id="${CSS.escape(tempId)}"]`);
+    if (tempRow) tempRow.setAttribute("data-order-id", realOrder.id);
 
-    // Give backend snapshot a moment to complete, then force fresh load
-    await new Promise(resolve => setTimeout(resolve, ORDERS_CONST.CACHE_AFTER_WRITE_DELAY));
-    await loadData(1, true);
+    updateOrderInList(realOrder);
 
-  } catch (err) {
-    handleError(err, "saveOrder");
-  }
+    // Update cache with real order
+    _cacheReplaceOrder(tempId, realOrder);
+
+    Toast.show("✓ Đã tạo đơn hàng", "success", 2500);
+  })();
 }
 
 // formatPrice from common.js (window.formatPrice)
@@ -1154,7 +1315,10 @@ byId("btn-save").addEventListener("click", async () => {
   Loading.button(btn, true);
   try   { await saveOrder(); }
   catch (err) { handleError(err, "saveOrder"); }
-  finally     { Loading.button(btn, false); }
+  finally     {
+    // Modal closes immediately on success (optimistic), so release button quickly
+    Loading.button(btn, false);
+  }
 });
 
 byId("btn-add-item").addEventListener("click", () => addItemRow());
