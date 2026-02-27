@@ -11,6 +11,8 @@
   <link rel="stylesheet" href="navigation.css">
   <link rel="stylesheet" href="validation.css">
   <link rel="stylesheet" href="cache-notice.css">
+
+  <link rel="icon" type="image/png" href="/favico.png">  
 </head>
 <body>
 
@@ -155,10 +157,13 @@
     <!-- Product Detail Section - Full Width -->
     <div class="detail-section-full">
       <label>Product Detail (HTML)</label>
+      <div id="detail-create-notice" class="detail-create-notice" style="display: none;">
+        ℹ️ Bạn có thể thêm Product Detail sau khi tạo sản phẩm xong (chuyển sang chế độ Sửa).
+      </div>
       <div class="detail-input-group">
         <textarea id="field-detail" rows="8" placeholder="Nhập HTML chi tiết sản phẩm..."></textarea>
         <div class="detail-actions">
-          <button type="button" id="btn-save-detail" class="btn-save-detail">💾 Lưu Detail lên GitHub</button>
+          <button type="button" id="btn-save-detail" class="btn-save-detail">💾 Lưu detail</button>
           <button type="button" id="btn-load-detail" class="btn-load-detail" style="display: none;">📥 Load từ URL</button>
         </div>
       </div>
