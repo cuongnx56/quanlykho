@@ -464,3 +464,66 @@ window.PAGINATION            = PAGINATION;
 // Preserve original resetSession so page files can call
 // window._originalResetSession() before their own cleanup
 window._originalResetSession = resetSession;
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+// Lightweight non-blocking notification. Used by optimistic save flow.
+// Usage: Toast.show("message", "info"|"success"|"error", durationMs)
+//        Toast.show("Đang lưu...", "info", 0)  // 0 = persistent until hide()
+//        Toast.hide()
+const Toast = (() => {
+  let _timer = null;
+
+  const PALETTE = {
+    info:    { bg: '#1e293b', text: '#f1f5f9', border: '#64748b' },
+    success: { bg: '#14532d', text: '#dcfce7', border: '#22c55e' },
+    error:   { bg: '#7f1d1d', text: '#fee2e2', border: '#ef4444' },
+  };
+
+  function _container() {
+    let el = document.getElementById('_toast_wrap');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = '_toast_wrap';
+      Object.assign(el.style, {
+        position: 'fixed', bottom: '24px', right: '24px',
+        zIndex: '99999', pointerEvents: 'none',
+      });
+      document.body.appendChild(el);
+    }
+    return el;
+  }
+
+  function show(message, type = 'info', duration = 3000) {
+    hide();
+    const p = PALETTE[type] || PALETTE.info;
+    const el = document.createElement('div');
+    el.id = '_toast_el';
+    Object.assign(el.style, {
+      background: p.bg, color: p.text,
+      borderLeft: `4px solid ${p.border}`,
+      padding: '10px 16px', borderRadius: '8px',
+      fontSize: '13px', fontWeight: '500',
+      boxShadow: '0 4px 16px rgba(0,0,0,0.35)',
+      maxWidth: '320px', pointerEvents: 'auto',
+      opacity: '0', transform: 'translateY(6px)',
+      transition: 'opacity 0.18s ease, transform 0.18s ease',
+    });
+    el.textContent = message;
+    _container().appendChild(el);
+    requestAnimationFrame(() => {
+      el.style.opacity = '1';
+      el.style.transform = 'translateY(0)';
+    });
+    if (duration > 0) _timer = setTimeout(hide, duration);
+  }
+
+  function hide() {
+    if (_timer) { clearTimeout(_timer); _timer = null; }
+    const el = document.getElementById('_toast_el');
+    if (el) el.remove();
+  }
+
+  return { show, hide };
+})();
+
+window.Toast = Toast;
