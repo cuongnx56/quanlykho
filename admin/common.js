@@ -287,6 +287,29 @@ function resetSession() {
  * - Auth error detection via AUTH_ERROR_SIGNALS constant
  * - Throws typed errors: "AUTH_ERROR" prefix so callers can distinguish
  */
+/**
+ * Returns true when the error is a network / HTTP-transport problem
+ * (fetch failure, non-JSON body, redirect to Google login, etc.).
+ *
+ * These errors do NOT mean the GAS script failed — the script may have
+ * already written to the Sheet before the response was lost.  Callers
+ * that perform write operations should NOT rollback on these errors and
+ * should instead reload from the server to discover the real state.
+ */
+function isNetworkOrResponseError(err) {
+  if (!err) return false;
+  const msg = String(err.message || "").toLowerCase();
+  return (
+    err.name === "TypeError" ||          // fetch() network failure
+    msg.includes("failed to fetch") ||   // Chrome / Safari wording
+    msg.includes("networkerror") ||      // Firefox wording
+    msg.includes("load failed") ||       // iOS Safari wording
+    msg.includes("syntaxerror") ||       // res.json() got HTML instead of JSON
+    msg.includes("unexpected token") ||  // same
+    msg.includes("json")                 // generic JSON parse failure
+  );
+}
+
 async function apiCall(action, data = {}) {
   // ✅ Smart cache: only re-reads localStorage when TTL expired (~5 s)
   if (action !== "auth.login") {
@@ -527,3 +550,4 @@ const Toast = (() => {
 })();
 
 window.Toast = Toast;
+window.isNetworkOrResponseError = isNetworkOrResponseError;
