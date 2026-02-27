@@ -36,6 +36,38 @@ function closeModal() {
   byId("product-modal").classList.remove("active");
 }
 
+function setDetailSectionMode(mode) {
+  const isCreate = mode === "create";
+  const notice = byId("detail-create-notice");
+  const textarea = byId("field-detail");
+  const btnSave = byId("btn-save-detail");
+  const btnLoad = byId("btn-load-detail");
+  const detailUrlInput = byId("field-detail-url");
+
+  if (isCreate) {
+    notice.style.display = "block";
+    textarea.disabled = true;
+    textarea.style.background = "#f1f5f9";
+    textarea.style.cursor = "not-allowed";
+    btnSave.disabled = true;
+    btnSave.style.opacity = "0.4";
+    btnSave.style.cursor = "not-allowed";
+    btnLoad.style.display = "none";
+    detailUrlInput.style.display = "none";
+    detailUrlInput.previousElementSibling.style.display = "none";
+  } else {
+    notice.style.display = "none";
+    textarea.disabled = false;
+    textarea.style.background = "";
+    textarea.style.cursor = "";
+    btnSave.disabled = false;
+    btnSave.style.opacity = "";
+    btnSave.style.cursor = "";
+    detailUrlInput.style.display = "";
+    detailUrlInput.previousElementSibling.style.display = "";
+  }
+}
+
 function openHelpModal() {
   byId("image-link-help-modal").classList.add("active");
 }
@@ -45,6 +77,7 @@ function closeHelpModal() {
 }
 
 function clearForm() {
+  byId("field-id").disabled = false;
   byId("field-id").value = "";
   byId("field-title").value = "";
   byId("field-description").value = "";
@@ -268,15 +301,18 @@ function renderProducts() {
       // Hide amount_in_stock field when editing
       const wrapper = byId("field-amount-in-stock-wrapper");
       if (wrapper) wrapper.style.display = "none";
+      byId("field-id").disabled = true;
+      setDetailSectionMode("edit");
       openModal();
     });
   });
 }
 
 function updateProductInList(product) {
-  // Update in products array
+  // Merge with existing product to preserve fields not returned by update API (e.g. amount_in_stock)
   const index = products.findIndex(p => p.id === product.id);
   if (index !== -1) {
+    product = Object.assign({}, products[index], product);
     products[index] = product;
   }
   
@@ -284,28 +320,46 @@ function updateProductInList(product) {
   const tbody = byId("products-table").querySelector("tbody");
   const row = tbody.querySelector(`tr[data-product-id="${product.id}"]`);
   if (row) {
+    const imageLink = product["image link"] || "";
+    const imageSrc = getImageSource(imageLink);
+    const imageHtml = imageSrc ? `<img src="${imageSrc}" alt="${product.title || product.name || ''}" class="product-thumbnail" onerror="this.style.display='none'">` : '';
+    
     row.innerHTML = `
       <td>${product.id || ""}</td>
-      <td>${product.title || product.name || ""}</td>
+      <td>
+        <div class="product-title-cell">
+          ${imageHtml}
+          <span>${product.title || product.name || ""}</span>
+        </div>
+      </td>
       <td>${product.price || ""}</td>
-      <td>${product.amount_in_stock || ""}</td>
+      <td>${product.amount_in_stock ?? ""}</td>
       <td>${product.availability || ""}</td>
       <td>${product.brand || ""}</td>
       <td>${product.mpn || ""}</td>
-      <td><button class="action-btn" data-id="${product.id}">Sửa</button></td>
+      <td>
+        <button class="action-btn" data-id="${product.id}">Sửa</button>
+        <button class="action-btn btn-danger" data-id="${product.id}" data-action="delete" style="margin-left: 0.5rem;">Xóa</button>
+      </td>
     `;
-    // Re-attach event listener
-    const btn = row.querySelector(".action-btn");
-    if (btn) {
+    // Re-attach event listeners
+    Array.from(row.querySelectorAll(".action-btn")).forEach(btn => {
       btn.addEventListener("click", () => {
+        const action = btn.getAttribute("data-action");
+        if (action === "delete") {
+          deleteProduct(product.id);
+          return;
+        }
         editMode = "edit";
         fillForm(product);
         byId("modal-title").textContent = "Sửa sản phẩm";
         const wrapper = byId("field-amount-in-stock-wrapper");
         if (wrapper) wrapper.style.display = "none";
+        byId("field-id").disabled = true;
+        setDetailSectionMode("edit");
         openModal();
       });
-    }
+    });
   }
 }
 
@@ -365,6 +419,7 @@ function addProductToList(product) {
         byId("modal-title").textContent = "Sửa sản phẩm";
         const wrapper = byId("field-amount-in-stock-wrapper");
         if (wrapper) wrapper.style.display = "none";
+        setDetailSectionMode("edit");
         openModal();
       });
     });
@@ -750,6 +805,8 @@ byId("btn-new").addEventListener("click", () => {
   // Show amount_in_stock field when creating
   const wrapper = byId("field-amount-in-stock-wrapper");
   if (wrapper) wrapper.style.display = "";
+  byId("field-id").disabled = false;
+  setDetailSectionMode("create");
   openModal();
 });
 
