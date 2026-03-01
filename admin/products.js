@@ -81,12 +81,13 @@ function clearForm() {
   byId("field-id").value = "";
   byId("field-title").value = "";
   byId("field-description").value = "";
-  byId("field-availability").value = "";
+  byId("field-availability").value = "in stock";
   byId("field-image-link").value = "";
   byId("field-import-price").value = "";
   byId("field-price").value = "";
   byId("field-amount-in-stock").value = "";
   byId("field-mpn").value = "";
+  delete byId("field-mpn").dataset.manuallyEdited;
   byId("field-brand").value = "";
   byId("field-category-select").value = "";
   byId("field-detail").value = "";
@@ -173,7 +174,7 @@ function fillForm(product) {
   byId("field-id").value = product.id || "";
   byId("field-title").value = product.title || product.name || "";
   byId("field-description").value = product.description || "";
-  byId("field-availability").value = product.availability || "";
+  byId("field-availability").value = product.availability || "in stock";
   byId("field-image-link").value = product["image link"] || "";
   byId("field-import-price").value = product.import_price || "";
   byId("field-price").value = product.price || "";
@@ -546,24 +547,30 @@ async function saveProduct() {
   
   // Define validation rules (sử dụng constants mặc định, có thể ghi đè)
   const rules = {
-    id: Validator.helpers.requiredId(1),  // Max 15 ký tự (từ constants)
-    title: Validator.helpers.requiredString(2),  // Max 50 ký tự (từ constants)
+    id: {
+      required  : true,
+      minLength : 1,
+      maxLength : Validator.limits.ID_MAX_LENGTH,
+      // Only letters, digits, hyphens and underscores — no spaces or special chars
+      pattern   : "^[A-Za-z0-9_-]+$",
+      patternMessage: "ID chỉ được chứa chữ cái, số, dấu gạch ngang (-) và gạch dưới (_)"
+    },
+    title: Validator.helpers.requiredString(2),
     price: Validator.helpers.requiredPositiveNumber(999999999),
-    description: Validator.helpers.textarea(false),  // Max 100 ký tự (từ constants)
-    availability: Validator.helpers.optionalString(),  // Max 50 ký tự (từ constants)
+    description: Validator.helpers.textarea(false),
     "image link": {
-      required: false,
-      type: 'url',
-      maxLength: 150  // Override limit lên 150 ký tự
+      required  : false,
+      type      : 'url',
+      maxLength : 150
     },
     "import_price": {
-      required: false,
-      type: 'number',
-      min: 0,
-      max: 999999999
+      required  : true,
+      type      : 'number',
+      min       : 0,
+      max       : 999999999
     },
-    mpn: Validator.helpers.optionalString(),  // Max 50 ký tự (từ constants)
-    brand: Validator.helpers.optionalString()  // Max 50 ký tự (từ constants)
+    mpn  : Validator.helpers.optionalString(),
+    brand: Validator.helpers.optionalString()
   };
   
   // Only validate amount_in_stock when creating
@@ -1211,6 +1218,31 @@ function renderCategoryDropdown() {
     select.value = currentValue;
   }
 }
+
+// Auto-fill MPN from ID (only when MPN hasn't been manually changed)
+byId("field-id").addEventListener("input", (e) => {
+  const mpnField = byId("field-mpn");
+  // Only sync when: create mode AND mpn is empty or equal to current id value
+  // (so manual edits to MPN are preserved)
+  if (editMode === "create") {
+    const currentId  = e.target.value;
+    const currentMpn = mpnField.value;
+    // Sync if MPN is still "following" the ID (hasn't been manually diverged)
+    if (!mpnField.dataset.manuallyEdited) {
+      mpnField.value = currentId;
+    }
+  }
+});
+
+byId("field-mpn").addEventListener("input", (e) => {
+  const idField = byId("field-id");
+  // Mark MPN as manually edited if user changes it to something different from the ID
+  if (e.target.value !== idField.value) {
+    e.target.dataset.manuallyEdited = "1";
+  } else {
+    delete e.target.dataset.manuallyEdited;
+  }
+});
 
 // Event listeners for category fields
 byId("field-category-select").addEventListener("change", (e) => {
