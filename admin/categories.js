@@ -10,6 +10,22 @@ let totalPages = 0;
 let totalCategories = 0;
 const itemsPerPage = PAGINATION.DEFAULT_LIMIT;
 
+/**
+ * Write the current in-memory categories list for the current page into
+ * localStorage so that reload and other tabs see the latest data without
+ * clearing cache or refetching.
+ */
+function _cacheWriteCurrentPage() {
+  const cacheKey = CacheManager.key("categories", "list", currentPage, itemsPerPage);
+  CacheManager.set(cacheKey, {
+    items      : [...categories],
+    total      : totalCategories,
+    page       : currentPage,
+    limit      : itemsPerPage,
+    totalPages
+  });
+}
+
 // Image resize constants
 const IMAGE_MAX_WIDTH = 68;
 const IMAGE_MAX_HEIGHT = 86;
@@ -37,10 +53,10 @@ function closeModal() {
 
 function clearForm() {
   byId("field-id").value = "";
+  byId("field-id").disabled = false;
   byId("field-name").value = "";
   byId("field-description").value = "";
   byId("field-image-link").value = "";
-  // Clear image preview
   hideImagePreview();
 }
 
@@ -144,6 +160,7 @@ function renderCategories() {
       const category = categories.find(c => c.id === id);
       if (!category) return;
       editMode = "edit";
+      byId("field-id").disabled = true;
       fillForm(category);
       byId("modal-title").textContent = "Sửa danh mục";
       openModal();
@@ -189,6 +206,7 @@ function updateCategoryInList(category) {
           deleteCategory(id);
         } else {
           editMode = "edit";
+          byId("field-id").disabled = true;
           fillForm(category);
           byId("modal-title").textContent = "Sửa danh mục";
           openModal();
@@ -250,6 +268,7 @@ function addCategoryToList(category) {
           deleteCategory(id);
         } else {
           editMode = "edit";
+          byId("field-id").disabled = true;
           fillForm(c);
           byId("modal-title").textContent = "Sửa danh mục";
           openModal();
@@ -378,11 +397,17 @@ async function saveCategory() {
   
   const data = readForm();
   
-  // Define validation rules (sử dụng constants mặc định)
+  // Define validation rules — ID: only letters, digits, hyphen, underscore (no spaces/special)
   const rules = {
-    id: Validator.helpers.requiredId(1),  // Max 15 ký tự (từ constants)
-    name: Validator.helpers.requiredString(2),  // Max 50 ký tự (từ constants)
-    description: Validator.helpers.textarea(false),  // Max 100 ký tự (từ constants)
+    id: {
+      required       : true,
+      minLength      : 1,
+      maxLength      : Validator.limits.ID_MAX_LENGTH,
+      pattern        : "^[A-Za-z0-9_-]+$",
+      patternMessage : "ID chỉ được chứa chữ cái, số, dấu gạch ngang (-) và gạch dưới (_)"
+    },
+    name: Validator.helpers.requiredString(2),
+    description: Validator.helpers.textarea(false),
     "image link": Validator.helpers.optionalUrl()
   };
   
@@ -432,18 +457,11 @@ async function saveCategory() {
       savedCategory = await apiCall("categories.update", data);
     }
 
-    // ✅ Clear ALL cache after write action (create/update)
-    CacheManager.clearAllCache();
-    
-    // ✅ Also invalidate specific caches to be thorough
-    CacheManager.invalidateOnProductChange();
-    
     closeModal();
     clearForm();
-    
-    // ✅ Update UI directly instead of reloading
+
+    // ✅ Update UI and write/update categories cache in localStorage (no full cache clear)
     if (editMode === "create") {
-      // Add new category to current page if on page 1, otherwise reload
       if (currentPage === 1 && categories.length < itemsPerPage) {
         addCategoryToList(savedCategory);
         totalCategories++;
@@ -453,9 +471,9 @@ async function saveCategory() {
         await loadCategories(currentPage);
       }
     } else {
-      // Update existing category in list
       updateCategoryInList(savedCategory);
     }
+    _cacheWriteCurrentPage();
   } catch (err) {
     // ✅ Handle token expiration - prompt user to login again
     if (err.message && (err.message.includes("Token expired") || err.message.includes("Unauthorized") || err.message.includes("hết hạn"))) {
@@ -568,7 +586,7 @@ byId("btn-login").addEventListener("click", async () => {
 
 byId("btn-new").addEventListener("click", () => {
   editMode = "create";
-  clearForm();
+  clearForm(); // also enables field-id
   byId("modal-title").textContent = "Thêm danh mục";
   openModal();
 });
