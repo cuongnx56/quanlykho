@@ -322,6 +322,20 @@ th {
   gap: 8px;
 }
 
+/* Product search wrapper (inside item-row) */
+.product-search-wrap {
+  position: relative;
+}
+
+.product-search-wrap .item-product-search {
+  width: 100%;
+}
+
+.product-search-wrap .autocomplete-dropdown {
+  min-width: 300px;
+  z-index: 2000;
+}
+
 /* Autocomplete dropdown */
 .autocomplete-dropdown {
   position: absolute;

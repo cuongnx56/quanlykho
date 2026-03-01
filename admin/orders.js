@@ -41,6 +41,109 @@ let productsMap = null;
 // Pre-built customer search index for fast filtering
 let customerSearchIndex = [];
 
+// ── Pending-save tracking ─────────────────────────────────────────────────────
+// Monotonic counter so concurrent orders get unique tempIds even if created in
+// the same millisecond.
+let _tempIdCounter = 0;
+
+// Set of tempIds currently being saved to GAS. Used to:
+//   1. Warn the user before navigating away while a save is in-flight.
+//   2. Re-attempt failed saves after reconnect (see _recoverPendingOrders).
+const _pendingSaves = new Set();
+
+// localStorage key for the pending-saves recovery queue
+const PENDING_QUEUE_KEY = "orders_pending_queue";
+
+/**
+ * Register a pending save so beforeunload can warn the user.
+ * Persists the order payload to localStorage for recovery after a crash/reload.
+ */
+function _pendingStart(tempId, payload) {
+  _pendingSaves.add(tempId);
+  try {
+    const queue = JSON.parse(localStorage.getItem(PENDING_QUEUE_KEY) || "[]");
+    queue.push({ tempId, payload, ts: Date.now() });
+    localStorage.setItem(PENDING_QUEUE_KEY, JSON.stringify(queue));
+  } catch (e) { /* storage full – non-critical */ }
+}
+
+/**
+ * Unregister a pending save (success OR unrecoverable failure).
+ */
+function _pendingEnd(tempId) {
+  _pendingSaves.delete(tempId);
+  try {
+    const queue = JSON.parse(localStorage.getItem(PENDING_QUEUE_KEY) || "[]");
+    const filtered = queue.filter(e => e.tempId !== tempId);
+    localStorage.setItem(PENDING_QUEUE_KEY, JSON.stringify(filtered));
+  } catch (e) { /* non-critical */ }
+}
+
+/**
+ * On page load: re-attempt any orders that were saved to the pending queue
+ * but never confirmed by GAS (browser was closed / network died mid-flight).
+ * Runs silently in the background after a short delay.
+ */
+async function _recoverPendingOrders() {
+  let queue;
+  try {
+    queue = JSON.parse(localStorage.getItem(PENDING_QUEUE_KEY) || "[]");
+  } catch (e) { return; }
+
+  if (!queue.length) return;
+
+  // Discard entries older than 1 hour (stale / already processed by another tab)
+  const ONE_HOUR = 60 * 60 * 1000;
+  const fresh = queue.filter(e => Date.now() - (e.ts || 0) < ONE_HOUR);
+  if (!fresh.length) {
+    localStorage.removeItem(PENDING_QUEUE_KEY);
+    return;
+  }
+
+  console.log(`🔄 Recovering ${fresh.length} pending order(s) from previous session...`);
+  Toast.show(`⏳ Đang khôi phục ${fresh.length} đơn chưa lưu...`, "info", 4000);
+
+  for (const entry of fresh) {
+    try {
+      const savedOrder = await apiCall("orders.create", entry.payload);
+      const realId = savedOrder.order_id ?? savedOrder.id;
+
+      // Replace any matching temp row still in the list
+      const idx = orders.findIndex(o => o.id === entry.tempId);
+      if (idx !== -1) {
+        const realOrder = Object.assign({}, orders[idx], { id: String(realId) });
+        orders[idx] = realOrder;
+        const tempRow = byId("orders-table")
+          ?.querySelector(`tbody tr[data-order-id="${CSS.escape(entry.tempId)}"]`);
+        if (tempRow) tempRow.setAttribute("data-order-id", realOrder.id);
+        updateOrderInList(realOrder);
+        _cacheReplaceOrder(entry.tempId, realOrder);
+      }
+
+      _pendingEnd(entry.tempId);
+      console.log(`✅ Recovered pending order → real id: ${realId}`);
+    } catch (err) {
+      if (isNetworkOrResponseError(err)) {
+        console.warn("⚠️ Still offline, will retry next session:", entry.tempId);
+        // Leave in queue for next load
+      } else {
+        // Logical error (duplicate, invalid data…) — discard
+        _pendingEnd(entry.tempId);
+        console.error("❌ Recovery failed (discarding):", entry.tempId, err.message);
+      }
+    }
+  }
+}
+
+// Warn before navigating away while saves are in-flight
+window.addEventListener("beforeunload", (e) => {
+  if (_pendingSaves.size > 0) {
+    e.preventDefault();
+    // Modern browsers show their own generic message; returnValue triggers the dialog
+    e.returnValue = "Đơn hàng đang được lưu. Bạn có chắc muốn rời trang?";
+  }
+});
+
 // --------------- Cache helpers for optimistic writes -----------------------
 
 /**
@@ -106,6 +209,29 @@ function _cacheRemoveOrder(orderId) {
 
   const items = cached.items.filter(o => o.id !== orderId);
   CacheManager.set(key, { ...cached, items, total: Math.max(0, (cached.total || 0) - 1) });
+}
+
+/**
+ * Disable or re-enable all action buttons in a specific order row.
+ * Called while a GAS write is in-flight so the user can't double-trigger
+ * status changes or other actions on a row that's already being processed.
+ *
+ * Note: updateOrderInList() and renderOrders() both re-render row innerHTML,
+ * so buttons are automatically restored to their correct enabled state after
+ * any re-render — no explicit "enable" call is needed after those.
+ *
+ * @param {string} orderId - The data-order-id attribute value of the row
+ * @param {boolean} disabled
+ */
+function _setRowActionsDisabled(orderId, disabled) {
+  const row = byId("orders-table")
+    ?.querySelector(`tbody tr[data-order-id="${CSS.escape(String(orderId))}"]`);
+  if (!row) return;
+  row.querySelectorAll(".action-btn").forEach(btn => {
+    btn.disabled      = disabled;
+    btn.style.opacity = disabled ? "0.45" : "";
+    btn.style.cursor  = disabled ? "not-allowed" : "";
+  });
 }
 
 // --------------- Session override -------------------------------------------
@@ -796,6 +922,8 @@ function changeStatus(orderId, newStatus) {
   // ── Optimistic UI update ───────────────────────────────────────────────
   const optimisticOrder = Object.assign({}, originalOrder, { status: newStatus });
   updateOrderInList(optimisticOrder);
+  // Disable action buttons while GAS call is in-flight
+  _setRowActionsDisabled(orderId, true);
   Toast.show("Đang cập nhật trạng thái...", "info", 0);
 
   // ── Background GAS call (async IIFE) ───────────────────────────────────
@@ -946,20 +1074,20 @@ function addItemRow() {
   row.className   = "item-row";
   row.dataset.index = index;
 
-  // ✅ escapeAttr/escapeHtml for product options
-  const productOptions = products.map(p => `
-    <option value="${escapeAttr(p.id)}" data-price="${escapeAttr(p.price || 0)}">
-      ${escapeHtml(p.id)} - ${escapeHtml(p.title || p.name || p.id)}
-    </option>
-  `).join("");
-
   row.innerHTML = `
     <div>
       <label>Sản phẩm</label>
-      <select class="item-product" data-index="${index}">
-        <option value="">Chọn sản phẩm</option>
-        ${productOptions}
-      </select>
+      <div class="product-search-wrap">
+        <input
+          type="text"
+          class="item-product-search"
+          data-index="${index}"
+          placeholder="Tìm theo tên, mã SKU..."
+          autocomplete="off"
+        >
+        <input type="hidden" class="item-product" data-index="${index}" value="">
+        <div class="autocomplete-dropdown product-search-dropdown" style="display:none;"></div>
+      </div>
     </div>
     <div>
       <label>Số lượng</label>
@@ -980,21 +1108,122 @@ function addItemRow() {
   `;
 
   container.appendChild(row);
-
   currentItems.push({ product_id: "", qty: 1, price: 0 });
 
-  const productSelect = row.querySelector(".item-product");
-  const qtyInput      = row.querySelector(".item-qty");
-  const priceInput    = row.querySelector(".item-price");
+  const searchInput = row.querySelector(".item-product-search");
+  const hiddenInput = row.querySelector(".item-product");
+  const dropdown    = row.querySelector(".product-search-dropdown");
+  const qtyInput    = row.querySelector(".item-qty");
+  const priceInput  = row.querySelector(".item-price");
 
-  productSelect.addEventListener("change", function () {
-    const defaultPrice = this.options[this.selectedIndex].getAttribute("data-price") || 0;
-    priceInput.value       = defaultPrice;
-    priceInput.placeholder = `Giá đề xuất: ${formatPrice(defaultPrice)}`;
-    updateItemRow(index);
+  // Show all loaded products on focus (when empty)
+  searchInput.addEventListener("focus", () => {
+    _renderProductDropdown(dropdown, products, searchInput, hiddenInput, priceInput, index);
   });
+
+  // Debounced search: in-memory filter first, then Worker API
+  const debouncedSearch = debounce(async (query) => {
+    hiddenInput.value = "";
+    if (!query.trim()) {
+      _renderProductDropdown(dropdown, products, searchInput, hiddenInput, priceInput, index);
+      return;
+    }
+    // Show loading indicator while searching
+    dropdown.innerHTML = `<div class="autocomplete-item" style="color:#64748b;font-style:italic;">⏳ Đang tìm...</div>`;
+    dropdown.style.display = "block";
+
+    const results = await _searchProductsFromAPI(query.trim());
+    _renderProductDropdown(dropdown, results, searchInput, hiddenInput, priceInput, index);
+  }, ORDERS_CONST.DEBOUNCE_DELAY);
+
+  searchInput.addEventListener("input", (e) => debouncedSearch(e.target.value));
+
+  searchInput.addEventListener("blur", () => {
+    setTimeout(() => { dropdown.style.display = "none"; }, ORDERS_CONST.AUTOCOMPLETE_BLUR_DELAY);
+  });
+
   qtyInput.addEventListener("input",   () => updateItemRow(index));
   priceInput.addEventListener("input", () => updateItemRow(index));
+}
+
+/**
+ * Search products from Worker API with fallback to in-memory filter.
+ * @param {string} query
+ * @returns {Promise<Object[]>}
+ */
+async function _searchProductsFromAPI(query) {
+  const q = query.toLowerCase();
+
+  // Try Worker API first
+  if (WorkerAPI?.isConfigured()) {
+    try {
+      const result = await WorkerAPI.call("/products", { search: query, limit: 20 });
+      if (result) {
+        const items = result.items ?? (Array.isArray(result) ? result : []);
+        // Merge new results into the in-memory products pool
+        mergeProducts(items);
+        return items;
+      }
+    } catch (e) {
+      console.warn("⚠️ Product search Worker error:", e.message);
+    }
+  }
+
+  // Fallback: filter in-memory products
+  return products.filter(p =>
+    (p.id          || "").toLowerCase().includes(q) ||
+    (p.title       || p.name || "").toLowerCase().includes(q) ||
+    (p.mpn         || "").toLowerCase().includes(q) ||
+    (p.brand       || "").toLowerCase().includes(q)
+  );
+}
+
+/**
+ * Render the product search dropdown.
+ */
+function _renderProductDropdown(dropdown, productList, searchInput, hiddenInput, priceInput, index) {
+  if (!productList || productList.length === 0) {
+    dropdown.innerHTML = `
+      <div class="autocomplete-item" style="color:#94a3b8;font-style:italic;">
+        <div class="autocomplete-item-name">Không tìm thấy sản phẩm</div>
+      </div>`;
+    dropdown.style.display = "block";
+    return;
+  }
+
+  dropdown.innerHTML = productList.slice(0, 20).map(p => `
+    <div class="autocomplete-item"
+         data-product-id="${escapeAttr(p.id)}"
+         data-price="${escapeAttr(String(p.price || 0))}">
+      <div class="autocomplete-item-name">
+        ${escapeHtml(p.id)} &mdash; ${escapeHtml(p.title || p.name || p.id)}
+      </div>
+      <div class="autocomplete-item-details">
+        ${p.amount_in_stock != null ? `Tồn: <strong>${escapeHtml(String(p.amount_in_stock))}</strong> &nbsp;·&nbsp;` : ""}
+        Giá: <strong>${escapeHtml(formatPrice(p.price || 0))}</strong>
+        ${p.brand ? `&nbsp;·&nbsp; ${escapeHtml(p.brand)}` : ""}
+      </div>
+    </div>
+  `).join("");
+
+  dropdown.onclick = (e) => {
+    const item = e.target.closest(".autocomplete-item[data-product-id]");
+    if (!item) return;
+
+    const productId = item.dataset.productId;
+    const price     = item.dataset.price;
+    const product   = productList.find(p => p.id === productId) || {};
+
+    searchInput.value      = `${productId} — ${product.title || product.name || productId}`;
+    hiddenInput.value      = productId;
+    priceInput.value       = price;
+    priceInput.placeholder = `Giá đề xuất: ${formatPrice(price)}`;
+
+    dropdown.style.display = "none";
+    updateItemRow(index);
+  };
+
+  dropdown.style.display = "block";
 }
 
 function updateItemRow(index) {
@@ -1200,7 +1429,8 @@ async function saveOrder() {
     .filter(Boolean)
     .reduce((sum, item) => sum + item.qty * item.price, 0);
 
-  const tempId = "temp_" + Date.now();
+  // Counter-based tempId: collision-safe even for rapid back-to-back creates
+  const tempId = `temp_${Date.now()}_${++_tempIdCounter}`;
   const optimisticOrder = {
     id            : tempId,
     customer_id   : customerId,
@@ -1218,33 +1448,44 @@ async function saveOrder() {
 
   orders.unshift(optimisticOrder);
   renderOrders();
+  // Disable action buttons while GAS save is in-flight
+  _setRowActionsDisabled(tempId, true);
 
   // Persist optimistic order into the page-1 localStorage cache so a
   // browser refresh before GAS responds still shows it.
   _cacheUpsertOrder(optimisticOrder);
 
+  // Payload snapshot — used both for the GAS call and for recovery on reload
+  const gasPayload = {
+    customer_id   : customerId,
+    items,
+    created_at    : orderDate,
+    shipping_info : JSON.stringify(shippingInfo),
+    note          : orderNote || undefined,
+  };
+
   Toast.show("Đang lưu đơn hàng...", "info", 0);
+
+  // Register in pending queue BEFORE the async call so a crash/reload mid-flight
+  // can recover the order on next page load.
+  _pendingStart(tempId, gasPayload);
 
   // ── Background GAS call ────────────────────────────────────────────────
   (async () => {
     let savedOrder;
     try {
-      savedOrder = await apiCall("orders.create", {
-        customer_id   : customerId,
-        items,
-        created_at    : orderDate,
-        shipping_info : JSON.stringify(shippingInfo),
-        note          : orderNote || undefined,
-      });
+      savedOrder = await apiCall("orders.create", gasPayload);
     } catch (err) {
       const msg = err?.message || "Lỗi không xác định";
 
       if (isNetworkOrResponseError(err)) {
         // GAS may have already written to the Sheet — don't rollback.
-        // The optimistic row (already in memory + cache) stays visible.
-        Toast.show("⚠️ Mất kết nối — đơn hàng có thể đã được lưu.", "info", 5000);
+        // Order stays in memory + cache + recovery queue for next reload.
+        Toast.show("⚠️ Mất kết nối — đơn hàng có thể đã được lưu. Sẽ thử lại khi tải lại trang.", "info", 6000);
+        // Keep in _pendingSaves so beforeunload still warns if user tries to leave
       } else {
-        // Logical API error → rollback optimistic row and cache entry
+        // Logical API error (invalid data, auth, etc.) → rollback + discard
+        _pendingEnd(tempId);
         const idx = orders.findIndex(o => o.id === tempId);
         if (idx !== -1) orders.splice(idx, 1);
         _cacheRemoveOrder(tempId);
@@ -1257,10 +1498,10 @@ async function saveOrder() {
       return;
     }
 
-    // ── API succeeded: merge response into optimistic order ──────────
-    // Response only contains { order_id, total } — merge with the full
-    // optimistic object so we keep all fields (items_json, shipping_info…).
-    const realId = savedOrder.order_id ?? savedOrder.id;
+    // ── API succeeded ─────────────────────────────────────────────────
+    _pendingEnd(tempId);
+
+    const realId    = savedOrder.order_id ?? savedOrder.id;
     const realOrder = Object.assign({}, optimisticOrder, {
       id    : String(realId),
       total : savedOrder.total ?? optimisticOrder.total,
@@ -1270,17 +1511,13 @@ async function saveOrder() {
     const idx = orders.findIndex(o => o.id === tempId);
     if (idx !== -1) orders[idx] = realOrder;
 
-    // Patch the temp row's data-order-id to the real ID so updateOrderInList
-    // can find it, then re-render its innerHTML with correct button callbacks.
+    // Patch DOM attribute then re-render so action buttons use the real ID
     const tempRow = byId("orders-table")
-      .querySelector(`tbody tr[data-order-id="${CSS.escape(tempId)}"]`);
+      ?.querySelector(`tbody tr[data-order-id="${CSS.escape(tempId)}"]`);
     if (tempRow) tempRow.setAttribute("data-order-id", realOrder.id);
-
     updateOrderInList(realOrder);
 
-    // Update cache with real order
     _cacheReplaceOrder(tempId, realOrder);
-
     Toast.show("✓ Đã tạo đơn hàng", "success", 2500);
   })();
 }
@@ -1312,11 +1549,14 @@ byId("btn-close-detail").addEventListener("click", () => closeDetailModal());
 
 byId("btn-save").addEventListener("click", async () => {
   const btn = byId("btn-save");
+  // Guard: prevent double-submit while validation / customer-create is running
+  if (btn.disabled) return;
   Loading.button(btn, true);
   try   { await saveOrder(); }
   catch (err) { handleError(err, "saveOrder"); }
   finally     {
-    // Modal closes immediately on success (optimistic), so release button quickly
+    // saveOrder() closes the modal optimistically before GAS responds,
+    // so release the button immediately (the GAS call runs in background).
     Loading.button(btn, false);
   }
 });
@@ -1354,7 +1594,13 @@ updateSessionUI();
 
 if (session.token) {
   const { page } = Pagination.getParamsFromURL();
-  loadData(page).catch(err => {
-    handleError(err, "initial loadData");
-  });
+  loadData(page)
+    .then(() => {
+      // After data loads, try to recover any orders that failed to save in a
+      // previous session (network loss, browser close mid-flight, etc.)
+      setTimeout(_recoverPendingOrders, 1500);
+    })
+    .catch(err => {
+      handleError(err, "initial loadData");
+    });
 }
