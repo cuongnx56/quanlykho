@@ -11,12 +11,12 @@
 const CacheManager = {
   // Cache TTL (Time To Live) - milliseconds
   TTL: {
-    PRODUCTS: 5 * 60 * 1000,      // 15 phút
-    ORDERS: 5 * 60 * 1000,         // 15 phút
-    INVENTORY: 5 * 60 * 1000,      // 15 phút
-    CUSTOMERS: 5 * 60 * 1000,      // 15 phút
-    REPORTS: 5 * 60 * 1000,        // 15 phút
-    DASHBOARD: 5 * 60 * 1000       // 15 phút
+    PRODUCTS: 5 * 1000,      // 5 giây
+    ORDERS: 5 * 1000,         // 5 giây
+    INVENTORY: 5 * 1000,      // 5 giây
+    CUSTOMERS: 5 * 1000,      // 5 giây
+    REPORTS: 5 * 1000,        // 5 giây
+    DASHBOARD: 5 * 1000       // 5 giây
   },
 
   /**
