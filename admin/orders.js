@@ -22,6 +22,8 @@ const ORDERS_CONST = {
   DEBOUNCE_DELAY          : 300,   // ms debounce on customer input
   SEARCH_MIN_LENGTH       : 1,     // min chars before filtering
   CUSTOMERS_LIMIT         : 1000,  // keep existing behaviour for customers
+  /** Polling interval: detect đơn mới (page 1, limit 1) — không dùng localStorage cache */
+  NEW_ORDER_POLL_MS       : 15000,
 };
 
 // --------------- Page state -------------------------------------------------
@@ -238,6 +240,8 @@ function _setRowActionsDisabled(orderId, disabled) {
 
 function resetSession() {
   if (window._originalResetSession) window._originalResetSession();
+  stopNewOrderPolling();
+  closeNewOrderNotifyModal();
   orders    = [];
   products  = [];
   customers = [];
@@ -246,6 +250,130 @@ function resetSession() {
   renderOrders();
 }
 window.resetSession = resetSession;
+
+// ─── Đơn mới: polling + modal ───────────────────────────────────────────────
+
+let _newOrderPollTimer     = null;
+let _newOrderPollActive    = false;
+let _newOrderPollInFlight  = false;
+let _newOrderPollBaselineReady = false;
+let _lastRemoteHeadOrderId = null;
+
+function _ordersHeadIdFromListPayload(data) {
+  const items = data?.items;
+  if (!Array.isArray(items) || items.length === 0) return null;
+  const id = items[0]?.id;
+  return id == null ? null : String(id);
+}
+
+/**
+ * Chỉ lấy đơn đầu trang 1 (mới nhất) — Worker → GAS, không đọc CacheManager.
+ */
+async function fetchOrdersHeadFromBackend() {
+  let data = null;
+  if (window.WorkerAPI?.isConfigured()) {
+    data = await window.WorkerAPI.ordersList({ page: 1, limit: 1 });
+  }
+  if (!data) {
+    data = await apiCall("orders.list", { page: 1, limit: 1 });
+  }
+  return data;
+}
+
+async function refreshNewOrderPollBaseline() {
+  reloadSession();
+  if (!session.token) return;
+  try {
+    const payload = await fetchOrdersHeadFromBackend();
+    _lastRemoteHeadOrderId     = _ordersHeadIdFromListPayload(payload);
+    _newOrderPollBaselineReady = true;
+  } catch (e) {
+    console.warn("⚠️ refreshNewOrderPollBaseline:", e?.message || e);
+  }
+}
+
+function openNewOrderNotifyModal() {
+  byId("new-order-notify-modal")?.classList.add("active");
+}
+
+function closeNewOrderNotifyModal() {
+  byId("new-order-notify-modal")?.classList.remove("active");
+}
+
+function stopNewOrderPolling() {
+  _newOrderPollActive = false;
+  if (_newOrderPollTimer) {
+    clearInterval(_newOrderPollTimer);
+    _newOrderPollTimer = null;
+  }
+}
+
+function startNewOrderPolling() {
+  reloadSession();
+  if (!session.token) return;
+  stopNewOrderPolling();
+  _newOrderPollActive = true;
+  _newOrderPollTimer = setInterval(tickNewOrderPoll, ORDERS_CONST.NEW_ORDER_POLL_MS);
+}
+
+async function tickNewOrderPoll() {
+  if (!_newOrderPollActive || _newOrderPollInFlight) return;
+  if (document.visibilityState !== "visible") return;
+
+  reloadSession();
+  if (!session.token) {
+    stopNewOrderPolling();
+    return;
+  }
+
+  _newOrderPollInFlight = true;
+  try {
+    const payload = await fetchOrdersHeadFromBackend();
+    const headId  = _ordersHeadIdFromListPayload(payload);
+
+    if (!_newOrderPollBaselineReady) {
+      _lastRemoteHeadOrderId     = headId;
+      _newOrderPollBaselineReady = true;
+      return;
+    }
+
+    const prev = _lastRemoteHeadOrderId;
+    if (headId !== prev) {
+      stopNewOrderPolling();
+      openNewOrderNotifyModal();
+    }
+  } catch (e) {
+    const msg = e?.message || String(e);
+    if (typeof isAuthError === "function" && isAuthError(msg)) {
+      stopNewOrderPolling();
+    }
+    console.warn("⚠️ tickNewOrderPoll:", msg);
+  } finally {
+    _newOrderPollInFlight = false;
+  }
+}
+
+async function onNewOrderReloadClick() {
+  const btn = byId("btn-new-order-reload");
+  if (btn) Loading.button(btn, true);
+  try {
+    CacheInvalidator.orders();
+    closeNewOrderNotifyModal();
+    await loadData(currentPage);
+    await refreshNewOrderPollBaseline();
+    startNewOrderPolling();
+  } catch (e) {
+    handleError(e, "onNewOrderReloadClick");
+  } finally {
+    if (btn) Loading.button(btn, false);
+  }
+}
+
+async function onNewOrderDismissClick() {
+  closeNewOrderNotifyModal();
+  await refreshNewOrderPollBaseline();
+  startNewOrderPolling();
+}
 
 // --------------- Utilities --------------------------------------------------
 
@@ -526,6 +654,8 @@ async function login() {
   updateSessionUI();
   const { page } = Pagination.getParamsFromURL();
   await loadData(page);
+  await refreshNewOrderPollBaseline();
+  startNewOrderPolling();
 }
 
 // --------------- Data loading -----------------------------------------------
@@ -1519,6 +1649,7 @@ async function saveOrder() {
 
     _cacheReplaceOrder(tempId, realOrder);
     Toast.show("✓ Đã tạo đơn hàng", "success", 2500);
+    refreshNewOrderPollBaseline().catch(() => {});
   })();
 }
 
@@ -1563,6 +1694,16 @@ byId("btn-save").addEventListener("click", async () => {
 
 byId("btn-add-item").addEventListener("click", () => addItemRow());
 
+byId("btn-new-order-reload")?.addEventListener("click", () => {
+  onNewOrderReloadClick();
+});
+byId("btn-new-order-dismiss")?.addEventListener("click", () => {
+  onNewOrderDismissClick();
+});
+byId("btn-close-new-order-notify")?.addEventListener("click", () => {
+  onNewOrderDismissClick();
+});
+
 // --------------- Init -------------------------------------------------------
 
 // Initialize WorkerAPI
@@ -1595,10 +1736,12 @@ updateSessionUI();
 if (session.token) {
   const { page } = Pagination.getParamsFromURL();
   loadData(page)
-    .then(() => {
+    .then(async () => {
       // After data loads, try to recover any orders that failed to save in a
       // previous session (network loss, browser close mid-flight, etc.)
       setTimeout(_recoverPendingOrders, 1500);
+      await refreshNewOrderPollBaseline();
+      startNewOrderPolling();
     })
     .catch(err => {
       handleError(err, "initial loadData");
