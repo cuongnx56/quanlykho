@@ -774,11 +774,9 @@ async function deleteProduct(productId) {
       token: session.token,
       id: productId
     });
-    
-    // ✅ Clear ALL cache after write action (delete)
+
+    // ✅ Clear localStorage cache
     CacheManager.clearAllCache();
-    
-    // ✅ Also invalidate specific caches to be thorough
     CacheManager.invalidateOnProductChange();
     
     // ✅ Remove product from UI

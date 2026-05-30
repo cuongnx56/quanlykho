@@ -96,7 +96,8 @@ function populateForm(settings) {
   byId("shop_address").value = settings.shop_address || "";
   byId("shop_phone").value = settings.shop_phone || "";
   byId("shop_email").value = settings.shop_email || "";
-  byId("shop_tax_code").value = settings.shop_tax_code || "";
+  byId("shop_tax_code").value   = settings.shop_tax_code   || "";
+  byId("shop_footer_text").value = settings.shop_footer_text || "Cảm ơn quý khách! Hẹn gặp lại 🙏";
   byId("currency").value = settings.currency || "VND";
   
   // GitHub config
@@ -124,7 +125,8 @@ async function saveSettings() {
       shop_address: byId("shop_address").value.trim(),
       shop_phone: byId("shop_phone").value.trim(),
       shop_email: byId("shop_email").value.trim(),
-      shop_tax_code: byId("shop_tax_code").value.trim(),
+      shop_tax_code   : byId("shop_tax_code").value.trim(),
+      shop_footer_text: byId("shop_footer_text").value.trim(),
       currency: byId("currency").value,
       // GitHub config
       github_owner: byId("github_owner").value.trim(),
