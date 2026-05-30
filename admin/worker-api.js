@@ -49,44 +49,61 @@ class WorkerNotConfiguredError extends Error {
 // ─── Circuit breaker ─────────────────────────────────────────────────────────
 
 const CircuitBreaker = (() => {
-  const FAILURE_THRESHOLD = 3;        // consecutive failures before opening
-  const RECOVERY_WINDOW   = 30_000;   // ms to wait before retrying (30 s)
-  const REQUEST_TIMEOUT   = 5_000;    // ms before a single request is aborted
+  const FAILURE_THRESHOLD = 3;       // failures per endpoint before opening
+  const RECOVERY_WINDOW   = 30_000;  // ms before half-open retry
+  const REQUEST_TIMEOUT   = 8_000;   // ms — tăng lên 8s vì GAS cold start ~4-5s
 
-  let failures    = 0;
-  let openedAt    = null; // timestamp when circuit was opened
+  // Per-endpoint state: Map<endpoint, { failures, openedAt }>
+  const _state = new Map();
+
+  function _get(endpoint) {
+    if (!_state.has(endpoint)) _state.set(endpoint, { failures: 0, openedAt: null });
+    return _state.get(endpoint);
+  }
 
   return {
     REQUEST_TIMEOUT,
 
-    isOpen() {
-      if (openedAt === null) return false;
-      if (Date.now() - openedAt >= RECOVERY_WINDOW) {
-        // Half-open: reset and let one request through
-        this.reset();
+    isOpen(endpoint) {
+      const s = _get(endpoint);
+      if (s.openedAt === null) return false;
+      if (Date.now() - s.openedAt >= RECOVERY_WINDOW) {
+        // Half-open: reset và cho 1 request qua thử
+        this.reset(endpoint);
         return false;
       }
       return true;
     },
 
-    recordSuccess() {
-      this.reset();
+    recordSuccess(endpoint) {
+      this.reset(endpoint);
     },
 
-    recordFailure() {
-      failures++;
-      if (failures >= FAILURE_THRESHOLD && openedAt === null) {
-        openedAt = Date.now();
+    recordFailure(endpoint) {
+      const s = _get(endpoint);
+      s.failures++;
+      if (s.failures >= FAILURE_THRESHOLD && s.openedAt === null) {
+        s.openedAt = Date.now();
         console.warn(
-          `⚡ WorkerAPI circuit OPEN after ${failures} failures. ` +
-          `Bypassing Worker for ${RECOVERY_WINDOW / 1000}s.`
+          `⚡ WorkerAPI circuit OPEN for "${endpoint}" after ${s.failures} failures. ` +
+          `Bypassing for ${RECOVERY_WINDOW / 1000}s.`
         );
       }
     },
 
-    reset() {
-      failures = 0;
-      openedAt = null;
+    reset(endpoint) {
+      if (endpoint) {
+        _state.set(endpoint, { failures: 0, openedAt: null });
+      } else {
+        _state.clear(); // reset tất cả (dùng khi logout/reload)
+      }
+    },
+
+    // Debug helper
+    status() {
+      const out = {};
+      _state.forEach((v, k) => { if (v.failures > 0 || v.openedAt) out[k] = v; });
+      return out;
     },
   };
 })();
@@ -127,8 +144,8 @@ const WorkerAPI = (() => {
     if (!isConfigured()) throw new WorkerNotConfiguredError();
 
     // ✅ Circuit breaker: bypass Worker entirely when it's been flapping
-    if (CircuitBreaker.isOpen()) {
-      throw new WorkerNetworkError("circuit open (too many recent failures)", endpoint);
+    if (CircuitBreaker.isOpen(endpoint)) {
+      throw new WorkerNetworkError("circuit open — too many recent failures", endpoint);
     }
 
     const apiKey = window.CommonUtils?.session?.apiKey || window.session?.apiKey;
@@ -173,7 +190,7 @@ const WorkerAPI = (() => {
 
       // Worker signals GAS fallback needed (KV miss)
       if (!json.success && json.fallback) {
-        CircuitBreaker.recordSuccess(); // Worker itself is healthy
+        CircuitBreaker.recordSuccess(endpoint);
         throw new WorkerCacheMissError(endpoint);
       }
 
@@ -181,7 +198,7 @@ const WorkerAPI = (() => {
         throw new WorkerNetworkError(json.error || "API error", endpoint);
       }
 
-      CircuitBreaker.recordSuccess();
+      CircuitBreaker.recordSuccess(endpoint);
       return json.data;
 
     } catch (err) {
@@ -193,12 +210,12 @@ const WorkerAPI = (() => {
 
       // Timeout
       if (err.name === "AbortError") {
-        CircuitBreaker.recordFailure();
+        CircuitBreaker.recordFailure(endpoint);
         throw new WorkerNetworkError(`timeout after ${CircuitBreaker.REQUEST_TIMEOUT}ms`, endpoint);
       }
 
       // Network / CORS / other
-      CircuitBreaker.recordFailure();
+      CircuitBreaker.recordFailure(endpoint);
       throw new WorkerNetworkError(err.message, endpoint);
     }
   }
@@ -239,6 +256,60 @@ const WorkerAPI = (() => {
   const productsList   = (p = {}) => list("/products",   p);
   const categoriesList = (p = {}) => list("/categories", p);
   const ordersList     = (p = {}) => list("/orders",     p);
+
+  /**
+   * ordersUpdateStatus — PATCH /orders/:id/status
+   * Gọi Worker route thay vì GAS trực tiếp → fast queue response
+   */
+  const ordersUpdateStatus = async (orderId, newStatus, token) => {
+    _ensureConfigured();
+    const url = `${_baseUrl}/orders/${encodeURIComponent(orderId)}/status`;
+    try {
+      const resp = await fetch(url, {
+        method  : 'PATCH',
+        headers : {
+          'Content-Type': 'application/json',
+          'X-API-Key'   : _apiKey,
+        },
+        body: JSON.stringify({ new_status: newStatus, token }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new WorkerNetworkError(`PATCH /orders status: ${resp.status} ${err.message || ''}`);
+      }
+      return await resp.json();
+    } catch (e) {
+      if (e instanceof WorkerNetworkError) throw e;
+      throw new WorkerNetworkError(`ordersUpdateStatus: ${e.message}`);
+    }
+  };
+
+  /**
+   * invoicesCreate — POST /invoices qua Worker
+   */
+  const invoicesCreate = async (data) => {
+    _ensureConfigured();
+    const url = `${_baseUrl}/invoices`;
+    try {
+      const resp = await fetch(url, {
+        method  : 'POST',
+        headers : {
+          'Content-Type': 'application/json',
+          'X-API-Key'   : _apiKey,
+        },
+        body: JSON.stringify(data),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new WorkerNetworkError(`POST /invoices: ${resp.status} ${err.message || ''}`);
+      }
+      const result = await resp.json();
+      return result.data ?? result;
+    } catch (e) {
+      if (e instanceof WorkerNetworkError) throw e;
+      throw new WorkerNetworkError(`invoicesCreate: ${e.message}`);
+    }
+  };
   const invoicesList   = (p = {}) => list("/invoices",   p);
   const customersList  = (p = {}) => list("/customers",  p);
   const inventoryList  = (p = {}) => list("/inventory",  p);
@@ -258,6 +329,8 @@ const WorkerAPI = (() => {
     productsList,
     categoriesList,
     ordersList,
+    ordersUpdateStatus,
+    invoicesCreate,
     invoicesList,
     customersList,
     inventoryList,
