@@ -3,828 +3,942 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  
-  <!-- SEO Meta Tags -->
-  <title>Phần mềm Quản lý Bán hàng & Tồn kho Miễn phí trên Giao diện Web - Data bảo mật trên Google Sheets</title>
-  <meta name="description" content="Phần mềm quản lý bán hàng và tồn kho miễn phí trên giao diện Web với data bảo mật trên Google Sheets. Quản lý sản phẩm, đơn hàng, kho hàng, báo cáo doanh thu dễ dàng. Không cần cài đặt, sử dụng ngay trên trình duyệt.">
-  <meta name="keywords" content="phần mềm quản lý bán hàng, quản lý tồn kho, quản lý kho hàng, giao diện web, Google Sheets, phần mềm miễn phí, quản lý cửa hàng, quản lý shop, báo cáo doanh thu">
-  <meta name="author" content="Quản Lý Kho">
+  <title>QuanLyKho – Phần mềm Order & Quản lý Nhà Hàng, Quán Café</title>
+  <meta name="description" content="Hệ thống order tại bàn thông minh kết hợp quản lý bán hàng toàn diện. Khách quét QR gọi món, bếp/thu ngân nhận đơn tức thì. Miễn phí, chạy trên Google Sheets.">
+  <meta name="keywords" content="phần mềm order tại bàn, QR menu, quản lý nhà hàng, quản lý quán cafe, quản lý bán hàng, tồn kho, báo cáo doanh thu, google sheets">
   <meta name="robots" content="index, follow">
-
   <link rel="icon" type="image/png" href="/favico.png">
-  
-  <!-- Open Graph Meta Tags -->
-  <meta property="og:title" content="Phần mềm Quản lý Bán hàng & Tồn kho Miễn phí trên Giao diện Web">
-  <meta property="og:description" content="Giải pháp quản lý cửa hàng toàn diện trên giao diện Web - Data bảo mật trên Google Sheets - Miễn phí & Dễ sử dụng">
+  <meta property="og:title" content="QuanLyKho – Order tại bàn & Quản lý Nhà Hàng">
+  <meta property="og:description" content="Khách quét QR gọi món. Đơn tự động về bếp. Quản lý doanh thu tức thì.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://quanlykho.io.vn">
-  <meta property="og:image" content="https://quanlykho.io.vn/images/1c3e92d9a0d92e8777c8.jpg">
-  
-  <!-- Twitter Card Meta Tags -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Phần mềm Quản lý Bán hàng & Tồn kho Miễn phí trên Giao diện Web">
-  <meta name="twitter:description" content="Giải pháp quản lý cửa hàng toàn diện - Data bảo mật trên Google Sheets">
-  <meta name="twitter:image" content="https://quanlykho.io.vn/images/1c3e92d9a0d92e8777c8.jpg">
-  
-  <!-- Canonical URL -->
   <link rel="canonical" href="https://quanlykho.io.vn">
-  
-  <!-- Schema.org Structured Data -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Phần mềm Quản lý Bán hàng & Tồn kho",
-    "applicationCategory": "BusinessApplication",
-    "operatingSystem": "Web Browser",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "VND"
-    },
-    "description": "Phần mềm quản lý bán hàng và tồn kho miễn phí trên giao diện Web với data bảo mật trên Google Sheets",
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.8",
-      "ratingCount": "150"
-    }
-  }
-  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0b0f1a;
+      --surface: #111827;
+      --surface2: #1a2235;
+      --border: rgba(255,255,255,0.08);
+      --border2: rgba(255,255,255,0.14);
+      --text: #f0f4ff;
+      --muted: #8892a4;
+      --accent: #f97316;
+      --accent2: #fb923c;
+      --teal: #14b8a6;
+      --teal-dim: rgba(20,184,166,0.12);
+      --orange-dim: rgba(249,115,22,0.12);
+      --blue: #3b82f6;
+      --blue-dim: rgba(59,130,246,0.10);
+      --green: #22c55e;
+      --green-dim: rgba(34,197,94,0.10);
+      --radius: 16px;
+      --radius-sm: 10px;
     }
 
+    html { scroll-behavior: smooth; }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.6;
-      color: #1e293b;
-      background: #0f172a;
+      font-family: 'Be Vietnam Pro', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
       overflow-x: hidden;
     }
 
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 20px;
-    }
+    .container { max-width: 1160px; margin: 0 auto; padding: 0 24px; }
 
-    /* Topbar */
-    .topbar {
-      background: rgba(17, 24, 39, 0.95);
-      backdrop-filter: blur(10px);
-      color: #fff;
-      padding: 20px 0;
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    /* ── NAV ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(11,15,26,0.88);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
     }
-
-    .topbar .container {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+    .nav-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 64px; gap: 16px;
     }
-
-    .topbar h1 {
-      font-size: 1.5rem;
-      color: #fff;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      gap: 10px;
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 700; font-size: 1.15rem; color: var(--text);
+      text-decoration: none; white-space: nowrap;
     }
-
-    .nav-menu {
-      display: flex;
-      align-items: center;
-      gap: 16px;
+    .nav-logo-icon {
+      width: 34px; height: 34px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), #ea580c);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
     }
-
+    .nav-links { display: flex; align-items: center; gap: 8px; }
     .nav-link {
-      color: #fff;
-      text-decoration: none;
-      padding: 10px 20px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 500;
-      transition: all 0.3s ease;
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--muted); text-decoration: none;
+      font-size: 0.875rem; font-weight: 500;
+      padding: 6px 14px; border-radius: 8px;
+      transition: color .2s, background .2s;
     }
-
-    .nav-link:hover {
-      background: rgba(99, 102, 241, 0.3);
-      border-color: rgba(99, 102, 241, 0.5);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    .nav-link:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+    .btn-nav {
+      background: var(--accent); color: #fff;
+      padding: 8px 20px; border-radius: 10px;
+      font-size: 0.875rem; font-weight: 600;
+      text-decoration: none; transition: opacity .2s, transform .15s;
     }
+    .btn-nav:hover { opacity: .88; transform: translateY(-1px); }
 
-    /* Hero Section */
-    .hero-section {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      padding: 100px 0;
-      position: relative;
+    /* ── HERO ── */
+    .hero {
+      padding: 96px 0 80px;
+      position: relative; overflow: hidden;
+    }
+    .hero-bg {
+      position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(ellipse 70% 60% at 60% 30%, rgba(249,115,22,0.10) 0%, transparent 70%),
+                  radial-gradient(ellipse 50% 50% at 20% 80%, rgba(20,184,166,0.07) 0%, transparent 60%);
+    }
+    .hero-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 64px; align-items: center;
+      position: relative; z-index: 1;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--orange-dim); border: 1px solid rgba(249,115,22,0.3);
+      color: var(--accent2); font-size: 0.78rem; font-weight: 600;
+      padding: 5px 12px; border-radius: 20px; margin-bottom: 20px;
+      letter-spacing: 0.3px; text-transform: uppercase;
+    }
+    .hero h1 {
+      font-size: 3rem; font-weight: 800; line-height: 1.18;
+      margin-bottom: 20px; letter-spacing: -0.5px;
+    }
+    .hero h1 em { font-style: normal; color: var(--accent); }
+    .hero .lead {
+      font-size: 1.1rem; color: var(--muted); line-height: 1.7;
+      margin-bottom: 36px; max-width: 480px;
+    }
+    .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; }
+    .btn-primary {
+      background: var(--accent); color: #fff;
+      padding: 14px 28px; border-radius: 12px;
+      font-size: 0.975rem; font-weight: 600;
+      text-decoration: none; display: inline-flex;
+      align-items: center; gap: 8px;
+      transition: opacity .2s, transform .15s, box-shadow .2s;
+      box-shadow: 0 8px 24px rgba(249,115,22,0.32);
+    }
+    .btn-primary:hover { opacity: .9; transform: translateY(-2px); box-shadow: 0 12px 30px rgba(249,115,22,0.40); }
+    .btn-outline {
+      background: transparent; color: var(--text);
+      padding: 14px 28px; border-radius: 12px;
+      font-size: 0.975rem; font-weight: 600;
+      text-decoration: none; display: inline-flex;
+      align-items: center; gap: 8px;
+      border: 1.5px solid var(--border2);
+      transition: background .2s, border-color .2s, transform .15s;
+    }
+    .btn-outline:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.25); transform: translateY(-2px); }
+
+    /* Hero phone mockup */
+    .hero-visual {
+      display: flex; justify-content: center; align-items: flex-start; gap: 16px;
+    }
+    .phone-frame {
+      width: 210px;
+      background: var(--surface);
+      border-radius: 28px;
+      border: 1.5px solid var(--border2);
+      padding: 12px;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.5);
+      flex-shrink: 0;
+    }
+    .phone-screen {
+      background: #faf8f4;
+      border-radius: 20px; overflow: hidden;
+      aspect-ratio: 9/16;
+      display: flex; flex-direction: column;
+    }
+    .phone-header {
+      background: #fff; padding: 10px 12px;
+      border-bottom: 1px solid #e8e3d9;
+      font-size: 0.7rem; font-weight: 700;
+      color: #1a1714; font-family: 'Playfair Display', serif;
+    }
+    .phone-header span { color: #c85b1e; }
+    .phone-cats {
+      display: flex; gap: 6px; padding: 8px 10px;
+      overflow-x: auto; background: #fff;
+    }
+    .pcat {
+      padding: 3px 9px; border-radius: 12px;
+      font-size: 0.6rem; font-weight: 600;
+      white-space: nowrap; color: #7a7369;
+      background: #f3f0ea;
+    }
+    .pcat.active { background: #c85b1e; color: #fff; }
+    .phone-items { flex: 1; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+    .pitem {
+      background: #fff; border-radius: 10px;
+      padding: 8px; display: flex; gap: 8px;
+      border: 1px solid #ede9e2;
+    }
+    .pitem-img {
+      width: 40px; height: 40px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; flex-shrink: 0;
+    }
+    .pitem-info { flex: 1; }
+    .pitem-name { font-size: 0.62rem; font-weight: 600; color: #1a1714; margin-bottom: 2px; }
+    .pitem-price { font-size: 0.6rem; color: #c85b1e; font-weight: 700; }
+    .pitem-add {
+      width: 20px; height: 20px; border-radius: 6px;
+      background: #c85b1e; color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 700; align-self: center;
+    }
+    .phone-cart {
+      background: #c85b1e; margin: 8px;
+      border-radius: 12px; padding: 10px 12px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .phone-cart .cart-label { font-size: 0.62rem; color: rgba(255,255,255,0.8); }
+    .phone-cart .cart-total { font-size: 0.72rem; font-weight: 700; color: #fff; }
+
+    /* Admin card */
+    .admin-frame {
+      background: var(--surface);
+      border-radius: 20px;
+      border: 1.5px solid var(--border2);
       overflow: hidden;
+      width: 280px;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.5);
+      flex-shrink: 0;
+      margin-top: 32px;
     }
-
-    .hero-section::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="none"/><circle cx="50" cy="50" r="2" fill="rgba(255,255,255,0.1)"/></svg>');
-      opacity: 0.3;
+    .admin-topbar {
+      background: #111827; padding: 10px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      font-size: 0.68rem; color: #8892a4; font-weight: 600;
+      display: flex; justify-content: space-between; align-items: center;
     }
-
-    .hero-content {
-      position: relative;
-      z-index: 1;
-      text-align: center;
-      color: white;
+    .admin-topbar .dot-row { display: flex; gap: 4px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .dot.r { background: #ff5f57; }
+    .dot.y { background: #febc2e; }
+    .dot.g { background: #28c840; }
+    .admin-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: rgba(255,255,255,0.06); }
+    .kpi-box {
+      background: var(--surface); padding: 12px 14px;
     }
-
-    .hero-content h1 {
-      font-size: 3.5rem;
-      font-weight: 800;
-      margin-bottom: 20px;
-      text-shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
-      animation: fadeInUp 0.8s ease;
+    .kpi-label { font-size: 0.6rem; color: var(--muted); margin-bottom: 4px; }
+    .kpi-val { font-size: 1.05rem; font-weight: 700; color: var(--text); }
+    .kpi-val.orange { color: var(--accent); }
+    .kpi-val.green { color: #22c55e; }
+    .kpi-val.teal { color: #14b8a6; }
+    .admin-notif {
+      padding: 10px 14px;
+      border-top: 1px solid rgba(255,255,255,0.07);
     }
-
-    .hero-content .tagline {
-      font-size: 1.4rem;
-      margin-bottom: 40px;
-      opacity: 0.95;
-      animation: fadeInUp 0.8s ease 0.2s both;
+    .notif-title { font-size: 0.62rem; color: var(--muted); margin-bottom: 7px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+    .notif-item {
+      display: flex; gap: 8px; align-items: flex-start;
+      padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
     }
+    .notif-item:last-child { border-bottom: none; }
+    .notif-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-top: 3px; flex-shrink: 0; }
+    .notif-dot.teal { background: var(--teal); }
+    .notif-text { font-size: 0.6rem; color: var(--text); line-height: 1.4; }
+    .notif-time { font-size: 0.55rem; color: var(--muted); margin-top: 1px; }
 
-    .hero-buttons {
-      display: flex;
-      gap: 20px;
-      justify-content: center;
+    /* ── TRUST BAR ── */
+    .trust-bar {
+      padding: 24px 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .trust-items {
+      display: flex; justify-content: center; gap: 48px;
       flex-wrap: wrap;
-      animation: fadeInUp 0.8s ease 0.4s both;
     }
+    .trust-item { display: flex; align-items: center; gap: 8px; }
+    .trust-icon { font-size: 1.2rem; }
+    .trust-text { font-size: 0.8rem; color: var(--muted); font-weight: 500; }
+    .trust-text strong { color: var(--text); }
 
-    .btn-hero {
-      padding: 18px 40px;
-      border-radius: 12px;
-      text-decoration: none;
-      font-size: 1.1rem;
-      font-weight: 600;
-      transition: all 0.3s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    /* ── SECTION HEADER ── */
+    .section-tag {
+      display: inline-block;
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.8px;
+      text-transform: uppercase; margin-bottom: 12px;
+      padding: 4px 12px; border-radius: 20px;
     }
+    .tag-orange { background: var(--orange-dim); color: var(--accent2); border: 1px solid rgba(249,115,22,0.2); }
+    .tag-teal { background: var(--teal-dim); color: var(--teal); border: 1px solid rgba(20,184,166,0.2); }
+    .tag-blue { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(59,130,246,0.2); }
+    .tag-green { background: var(--green-dim); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
 
-    .btn-hero-primary {
-      background: white;
-      color: #667eea;
+    .section-title {
+      font-size: 2rem; font-weight: 800; margin-bottom: 12px;
+      line-height: 1.2; letter-spacing: -0.3px;
     }
+    .section-sub { font-size: 1rem; color: var(--muted); max-width: 560px; }
+    .section-sub.center { margin: 0 auto; text-align: center; }
+    .text-center { text-align: center; }
 
-    .btn-hero-primary:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 25px rgba(255, 255, 255, 0.3);
+    /* ── HOW IT WORKS ── */
+    .how-section { padding: 80px 0; }
+    .how-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 80px; align-items: start; margin-top: 56px;
     }
-
-    .btn-hero-secondary {
-      background: rgba(255, 255, 255, 0.2);
-      color: white;
-      border: 2px solid white;
+    .how-side-label {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.6px; margin-bottom: 24px;
+      display: flex; align-items: center; gap: 8px;
     }
-
-    .btn-hero-secondary:hover {
-      background: white;
-      color: #667eea;
-      transform: translateY(-3px);
-    }
-
-    @keyframes fadeInUp {
-      from {
-        opacity: 0;
-        transform: translateY(30px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    /* Screenshots Section */
-    .screenshots-section {
-      padding: 80px 0;
-      background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-    }
-
-    .section-header {
-      text-align: center;
-      margin-bottom: 60px;
-    }
-
-    .section-header h2 {
-      font-size: 2.5rem;
-      color: white;
-      margin-bottom: 15px;
-      font-weight: 700;
-    }
-
-    .section-header p {
-      font-size: 1.2rem;
-      color: #94a3b8;
-    }
-
-    .screenshots-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-      gap: 30px;
-      margin-bottom: 40px;
-    }
-
-    .screenshot-card {
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 16px;
-      overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      transition: all 0.3s ease;
-      cursor: pointer;
-    }
-
-    .screenshot-card:hover {
-      transform: translateY(-10px);
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-      border-color: rgba(99, 102, 241, 0.5);
-    }
-
-    .screenshot-image {
-      width: 100%;
-      height: 250px;
-      background: #f1f5f9;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .how-steps { display: flex; flex-direction: column; gap: 0; }
+    .how-step {
+      display: flex; gap: 20px; padding: 20px 0;
+      border-bottom: 1px solid var(--border);
       position: relative;
-      overflow: hidden;
     }
-
-    .screenshot-image img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
+    .how-step:last-child { border-bottom: none; }
+    .how-num {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem; font-weight: 700; flex-shrink: 0;
     }
+    .num-orange { background: var(--orange-dim); color: var(--accent); border: 1px solid rgba(249,115,22,0.2); }
+    .num-teal { background: var(--teal-dim); color: var(--teal); border: 1px solid rgba(20,184,166,0.2); }
+    .how-step-content h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 4px; }
+    .how-step-content p { font-size: 0.85rem; color: var(--muted); line-height: 1.55; }
 
-    .screenshot-placeholder {
-      font-size: 4rem;
-      color: #94a3b8;
-    }
-
-    .screenshot-image::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
-      animation: shine 3s infinite;
-    }
-
-    @keyframes shine {
-      0% { transform: translateX(-100%); }
-      100% { transform: translateX(100%); }
-    }
-
-    .screenshot-info {
-      padding: 25px;
-    }
-
-    .screenshot-info h3 {
-      font-size: 1.3rem;
-      color: white;
-      margin-bottom: 10px;
-      font-weight: 600;
-    }
-
-    .screenshot-info p {
-      color: #94a3b8;
-      line-height: 1.6;
-    }
-
-    /* Features Section */
-    .features-section {
-      padding: 80px 0;
-      background: #1e293b;
-    }
-
+    /* ── FEATURES ── */
+    .features-section { padding: 80px 0; }
     .features-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 30px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px; margin-top: 48px;
+    }
+    .feat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      transition: border-color .25s, transform .2s, box-shadow .25s;
+    }
+    .feat-card:hover {
+      border-color: var(--border2);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+    }
+    .feat-icon-wrap {
+      width: 44px; height: 44px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; margin-bottom: 16px;
+    }
+    .feat-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+    .feat-card p { font-size: 0.85rem; color: var(--muted); line-height: 1.6; }
+    .feat-card .feat-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+    .feat-tag {
+      font-size: 0.68rem; font-weight: 600; padding: 3px 9px;
+      border-radius: 6px; background: rgba(255,255,255,0.06);
+      color: var(--muted); border: 1px solid rgba(255,255,255,0.08);
     }
 
-    .feature-card {
-      background: rgba(255, 255, 255, 0.05);
-      padding: 35px;
-      border-radius: 16px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      transition: all 0.3s ease;
+    /* ── WORKFLOW ── */
+    .workflow-section { padding: 80px 0; }
+    .workflow-diagram {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0; margin-top: 56px; flex-wrap: wrap;
     }
-
-    .feature-card:hover {
-      transform: translateY(-5px);
-      background: rgba(255, 255, 255, 0.08);
-      border-color: rgba(99, 102, 241, 0.5);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-    }
-
-    .feature-icon {
-      font-size: 3rem;
-      margin-bottom: 20px;
-      display: block;
-      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
-    }
-
-    .feature-card h3 {
-      font-size: 1.4rem;
-      margin-bottom: 12px;
-      color: white;
-      font-weight: 600;
-    }
-
-    .feature-card p {
-      color: #94a3b8;
-      line-height: 1.7;
-    }
-
-    /* How it works */
-    .how-it-works {
-      padding: 80px 0;
-      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-    }
-
-    .steps {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 40px;
-      margin-top: 60px;
-    }
-
-    .step {
-      text-align: center;
+    .wf-node {
+      background: var(--surface2);
+      border: 1.5px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 24px 20px; text-align: center;
+      width: 170px; flex-shrink: 0;
       position: relative;
     }
-
-    .step::after {
-      content: '→';
-      position: absolute;
-      top: 30px;
-      right: -20px;
-      font-size: 2rem;
-      color: rgba(99, 102, 241, 0.3);
+    .wf-node .wf-icon { font-size: 2rem; margin-bottom: 8px; display: block; }
+    .wf-node .wf-label { font-size: 0.8rem; font-weight: 700; color: var(--text); }
+    .wf-node .wf-sub { font-size: 0.7rem; color: var(--muted); margin-top: 4px; }
+    .wf-arrow {
+      font-size: 1.4rem; color: var(--muted);
+      padding: 0 8px; flex-shrink: 0;
     }
-
-    .step:last-child::after {
-      display: none;
+    .wf-node.highlight {
+      border-color: rgba(249,115,22,0.5);
+      background: rgba(249,115,22,0.06);
     }
+    .wf-node.highlight .wf-label { color: var(--accent2); }
 
-    .step-number {
-      width: 70px;
-      height: 70px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-      font-weight: bold;
-      margin: 0 auto 25px;
-      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    /* ── TECH STACK ── */
+    .tech-section { padding: 60px 0; }
+    .tech-grid { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 32px; }
+    .tech-pill {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 40px; padding: 8px 16px;
+      font-size: 0.83rem; font-weight: 600; color: var(--text);
+    }
+    .tech-pill span { font-size: 1.1rem; }
+
+    /* ── PLANS ── */
+    .plans-section { padding: 80px 0; }
+    .plans-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 24px; margin-top: 48px; max-width: 800px; margin-left: auto; margin-right: auto;
+    }
+    .plan-card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px 28px;
+      transition: border-color .25s, transform .2s;
+    }
+    .plan-card.featured {
+      border-color: rgba(249,115,22,0.5);
+      background: linear-gradient(145deg, rgba(249,115,22,0.05), var(--surface));
       position: relative;
     }
-
-    .step-number::before {
-      content: '';
-      position: absolute;
-      inset: -5px;
-      border-radius: 50%;
-      border: 2px solid rgba(99, 102, 241, 0.3);
-      animation: pulse 2s infinite;
+    .plan-badge {
+      position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+      background: var(--accent); color: #fff;
+      font-size: 0.68rem; font-weight: 700; padding: 4px 14px;
+      border-radius: 12px; letter-spacing: 0.4px; text-transform: uppercase;
+      white-space: nowrap;
     }
-
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.1); opacity: 0.5; }
+    .plan-name { font-size: 0.8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+    .plan-price { font-size: 2.2rem; font-weight: 800; margin-bottom: 4px; }
+    .plan-price sub { font-size: 0.9rem; font-weight: 500; color: var(--muted); }
+    .plan-desc { font-size: 0.82rem; color: var(--muted); margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+    .plan-features { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+    .plan-feat { display: flex; gap: 10px; align-items: flex-start; font-size: 0.84rem; }
+    .plan-feat .check { color: var(--green); font-size: 0.8rem; margin-top: 1px; flex-shrink: 0; }
+    .plan-feat.dim { color: var(--muted); }
+    .plan-feat.dim .check { color: var(--muted); }
+    .btn-plan {
+      display: block; text-align: center; text-decoration: none;
+      padding: 13px; border-radius: 12px; font-size: 0.9rem;
+      font-weight: 700; transition: opacity .2s, transform .15s;
     }
+    .btn-plan.primary { background: var(--accent); color: #fff; box-shadow: 0 6px 20px rgba(249,115,22,0.3); }
+    .btn-plan.primary:hover { opacity: .88; transform: translateY(-1px); }
+    .btn-plan.outline { border: 1.5px solid var(--border2); color: var(--text); }
+    .btn-plan.outline:hover { background: rgba(255,255,255,0.05); }
 
-    .step h3 {
-      font-size: 1.4rem;
-      margin-bottom: 12px;
-      color: white;
-      font-weight: 600;
-    }
-
-    .step p {
-      color: #94a3b8;
-      line-height: 1.7;
-    }
-
-    /* CTA Section */
+    /* ── CTA ── */
     .cta-section {
-      padding: 100px 0;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      position: relative;
-      overflow: hidden;
+      padding: 80px 0;
+      position: relative; overflow: hidden;
     }
-
-    .cta-section::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="2" fill="rgba(255,255,255,0.1)"/></svg>');
-      opacity: 0.3;
+    .cta-bg {
+      position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(ellipse 60% 80% at 50% 50%, rgba(249,115,22,0.10) 0%, transparent 70%);
     }
-
-    .cta-content {
-      position: relative;
-      z-index: 1;
+    .cta-box {
+      position: relative; z-index: 1;
+      background: var(--surface2);
+      border: 1.5px solid rgba(249,115,22,0.25);
+      border-radius: 24px; padding: 64px 48px;
       text-align: center;
-      color: white;
     }
+    .cta-box h2 { font-size: 2.4rem; font-weight: 800; margin-bottom: 14px; letter-spacing: -0.3px; }
+    .cta-box p { font-size: 1.05rem; color: var(--muted); margin-bottom: 36px; }
+    .cta-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
-    .cta-content h2 {
-      font-size: 3rem;
-      margin-bottom: 20px;
-      font-weight: 700;
-    }
-
-    .cta-content p {
-      font-size: 1.3rem;
-      margin-bottom: 50px;
-      opacity: 0.95;
-    }
-
-    .cta-buttons {
-      display: flex;
-      gap: 25px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
-    .btn-cta {
-      padding: 20px 50px;
-      border-radius: 12px;
-      text-decoration: none;
-      font-size: 1.2rem;
-      font-weight: 600;
-      transition: all 0.3s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-    }
-
-    .btn-cta-primary {
-      background: white;
-      color: #667eea;
-    }
-
-    .btn-cta-primary:hover {
-      transform: translateY(-5px) scale(1.05);
-      box-shadow: 0 12px 35px rgba(255, 255, 255, 0.3);
-    }
-
-    .btn-cta-secondary {
-      background: rgba(255, 255, 255, 0.2);
-      color: white;
-      border: 2px solid white;
-    }
-
-    .btn-cta-secondary:hover {
-      background: rgba(255, 255, 255, 0.3);
-      transform: translateY(-5px) scale(1.05);
-    }
-
-    /* Footer */
-    .footer {
-      background: #0f172a;
+    /* ── FOOTER ── */
+    footer {
       padding: 40px 0;
-      text-align: center;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      border-top: 1px solid var(--border);
     }
-
-    .footer-text {
-      font-size: 1rem;
-      margin-bottom: 15px;
-      color: #94a3b8;
+    .footer-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 20px; flex-wrap: wrap;
     }
-
-    .footer-bank {
-      font-size: 1.2rem;
-      color: white;
-      font-weight: 500;
+    .footer-brand { display: flex; align-items: center; gap: 10px; }
+    .footer-brand-name { font-weight: 700; font-size: 1rem; }
+    .footer-tagline { font-size: 0.78rem; color: var(--muted); }
+    .footer-right { font-size: 0.78rem; color: var(--muted); text-align: right; }
+    .footer-right a { color: var(--accent2); text-decoration: none; }
+    .footer-donate {
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 10px; padding: 10px 16px;
+      font-size: 0.78rem; color: var(--muted);
+      text-align: center; margin-top: 20px;
     }
-
-    .footer-bank strong {
-      color: #667eea;
-      font-size: 1.4rem;
-      font-weight: 700;
-    }
+    .footer-donate strong { color: var(--accent2); }
 
     /* Responsive */
-    @media (max-width: 768px) {
-      .topbar .container {
-        flex-direction: column;
-        gap: 15px;
-      }
-
-      .nav-menu {
-        width: 100%;
-        flex-direction: column;
-      }
-
-      .nav-link {
-        width: 100%;
-        text-align: center;
-      }
-
-      .hero-content h1 {
-        font-size: 2.2rem;
-      }
-
-      .hero-content .tagline {
-        font-size: 1.1rem;
-      }
-
-      .hero-section {
-        padding: 60px 0;
-      }
-
-      .section-header h2 {
-        font-size: 2rem;
-      }
-
-      .screenshots-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .features-grid,
-      .steps {
-        grid-template-columns: 1fr;
-      }
-
-      .step::after {
-        content: '↓';
-        top: auto;
-        bottom: -30px;
-        right: 50%;
-        transform: translateX(50%);
-      }
-
-      .cta-content h2 {
-        font-size: 2rem;
-      }
-
-      .cta-content p {
-        font-size: 1.1rem;
-      }
-
-      .cta-buttons {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .btn-cta {
-        width: 100%;
-        justify-content: center;
-      }
+    @media (max-width: 900px) {
+      .hero-grid, .how-grid { grid-template-columns: 1fr; gap: 40px; }
+      .hero-visual { display: none; }
+      .hero h1 { font-size: 2.2rem; }
+      .features-grid { grid-template-columns: 1fr 1fr; }
+      .plans-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+      .features-grid { grid-template-columns: 1fr; }
+      .cta-box { padding: 40px 24px; }
+      .cta-box h2 { font-size: 1.8rem; }
+      .nav-links .nav-link { display: none; }
+      .trust-items { gap: 24px; }
+      .workflow-diagram { flex-direction: column; }
+      .wf-arrow { transform: rotate(90deg); }
     }
   </style>
 </head>
 <body>
 
-<header class="topbar">
+<!-- NAV -->
+<nav>
   <div class="container">
-    <h1>📦 Quản Lý Kho</h1>
-    <nav class="nav-menu">
-      <a href="/admin/create-shop.html" class="nav-link">✨ Tạo Shop</a>
-      <a href="/admin/products.html" class="nav-link">🔐 Đăng nhập</a>
-    </nav>
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">
+        <div class="nav-logo-icon">🍜</div>
+        QuanLyKho
+      </a>
+      <div class="nav-links">
+        <a href="#features" class="nav-link">Tính năng</a>
+        <a href="#how-it-works" class="nav-link">Cách hoạt động</a>
+        <a href="#plans" class="nav-link">Gói dùng</a>
+        <a href="/admin/create-shop.html" class="btn-nav">Tạo shop miễn phí →</a>
+      </div>
+    </div>
   </div>
-</header>
+</nav>
 
-<section class="hero-section">
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
   <div class="container">
-    <div class="hero-content">
-      <h1>Phần mềm Quản lý Bán hàng & Tồn kho trên Giao diện Web</h1>
-      <p class="tagline">Giải pháp quản lý cửa hàng toàn diện - Data bảo mật trên Google Sheets - Miễn phí & Dễ sử dụng</p>
-      <div class="hero-buttons">
-        <a href="/admin/create-shop.html" class="btn-hero btn-hero-primary">
-          <span>✨</span> Tạo Shop Miễn Phí
-        </a>
-        <a href="/admin/products.html" class="btn-hero btn-hero-secondary">
-          <span>🔐</span> Đăng Nhập
-        </a>
+    <div class="hero-grid">
+      <div>
+        <div class="hero-badge">🚀 Miễn phí · Không cài đặt · Dùng ngay</div>
+        <h1>Order tại bàn &amp; Quản lý nhà hàng <em>thông minh</em></h1>
+        <p class="lead">Khách quét QR → chọn món → gửi đơn. Thu ngân và bếp nhận thông báo ngay tức thì. Doanh thu, tồn kho, báo cáo — tất cả trong một màn hình.</p>
+        <div class="hero-cta">
+          <a href="/admin/create-shop.html" class="btn-primary">✨ Tạo shop miễn phí</a>
+          <a href="https://cuongnx56.github.io/order-menu/index.html?api_key=bb90c3e7-c5bf-4276-9539-3a509667c540" class="btn-outline" target="_blank">📱 Xem demo menu</a>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <!-- Phone: ordering menu -->
+        <div class="phone-frame">
+          <div class="phone-screen">
+            <div class="phone-header">Nhà Hàng <span>Hương Việt</span></div>
+            <div class="phone-cats">
+              <div class="pcat active">Món chính</div>
+              <div class="pcat">Lẩu</div>
+              <div class="pcat">Nước uống</div>
+              <div class="pcat">Tráng miệng</div>
+            </div>
+            <div class="phone-items">
+              <div class="pitem">
+                <div class="pitem-img" style="background:#fff5e6;">🍜</div>
+                <div class="pitem-info">
+                  <div class="pitem-name">Phở bò đặc biệt</div>
+                  <div class="pitem-price">85.000 đ</div>
+                </div>
+                <div class="pitem-add">+</div>
+              </div>
+              <div class="pitem">
+                <div class="pitem-img" style="background:#f0faf0;">🥗</div>
+                <div class="pitem-info">
+                  <div class="pitem-name">Gỏi cuốn tôm thịt</div>
+                  <div class="pitem-price">65.000 đ</div>
+                </div>
+                <div class="pitem-add">+</div>
+              </div>
+              <div class="pitem">
+                <div class="pitem-img" style="background:#fff0f5;">🍱</div>
+                <div class="pitem-info">
+                  <div class="pitem-name">Cơm tấm sườn bì chả</div>
+                  <div class="pitem-price">75.000 đ</div>
+                </div>
+                <div class="pitem-add">+</div>
+              </div>
+              <div class="pitem">
+                <div class="pitem-img" style="background:#f5f0ff;">🍲</div>
+                <div class="pitem-info">
+                  <div class="pitem-name">Bún bò Huế</div>
+                  <div class="pitem-price">80.000 đ</div>
+                </div>
+                <div class="pitem-add">+</div>
+              </div>
+            </div>
+            <div class="phone-cart">
+              <div>
+                <div class="cart-label">Giỏ hàng · Bàn số 5</div>
+                <div class="cart-total">3 món · 225.000 đ</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.2);border-radius:8px;padding:5px 9px;font-size:0.58rem;color:#fff;font-weight:700;">Gửi đơn →</div>
+            </div>
+          </div>
+        </div>
+        <!-- Admin panel card -->
+        <div class="admin-frame">
+          <div class="admin-topbar">
+            <div class="dot-row"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div></div>
+            <span>Admin · Hôm nay</span>
+            <span>🔔 3</span>
+          </div>
+          <div class="admin-kpis">
+            <div class="kpi-box">
+              <div class="kpi-label">Doanh thu</div>
+              <div class="kpi-val orange">4.2M đ</div>
+            </div>
+            <div class="kpi-box">
+              <div class="kpi-label">Đơn hàng</div>
+              <div class="kpi-val">38</div>
+            </div>
+            <div class="kpi-box">
+              <div class="kpi-label">Chờ xử lý</div>
+              <div class="kpi-val teal">5 đơn</div>
+            </div>
+            <div class="kpi-box">
+              <div class="kpi-label">Sắp hết kho</div>
+              <div class="kpi-val" style="color:#f59e0b;">2 mặt hàng</div>
+            </div>
+          </div>
+          <div class="admin-notif">
+            <div class="notif-title">Đơn mới</div>
+            <div class="notif-item">
+              <div class="notif-dot"></div>
+              <div>
+                <div class="notif-text">Bàn 5 · 3 món · 225.000đ</div>
+                <div class="notif-time">vừa xong</div>
+              </div>
+            </div>
+            <div class="notif-item">
+              <div class="notif-dot teal"></div>
+              <div>
+                <div class="notif-text">Bàn 2 đã thanh toán · 340.000đ</div>
+                <div class="notif-time">5 phút trước</div>
+              </div>
+            </div>
+            <div class="notif-item">
+              <div class="notif-dot"></div>
+              <div>
+                <div class="notif-text">Bàn 8 · 2 món · 150.000đ</div>
+                <div class="notif-time">12 phút trước</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </section>
 
-<section class="screenshots-section">
+<!-- TRUST -->
+<div class="trust-bar">
   <div class="container">
-    <div class="section-header">
-      <h2>📸 Giao Diện Phần Mềm</h2>
-      <p>Khám phá các tính năng mạnh mẽ qua hình ảnh demo</p>
+    <div class="trust-items">
+      <div class="trust-item">
+        <span class="trust-icon">⚡</span>
+        <span class="trust-text"><strong>Realtime</strong> thông báo đơn mới</span>
+      </div>
+      <div class="trust-item">
+        <span class="trust-icon">📱</span>
+        <span class="trust-text"><strong>QR Menu</strong> không cần cài app</span>
+      </div>
+      <div class="trust-item">
+        <span class="trust-icon">⏱️</span>
+        <span class="trust-text"><strong>Cài đặt</strong> chỉ 5 phút</span>
+      </div>
+      <div class="trust-item">
+        <span class="trust-icon">🎯</span>
+        <span class="trust-text"><strong>Miễn phí</strong> không giới hạn thời gian</span>
+      </div>
+      <div class="trust-item">
+        <span class="trust-icon">💬</span>
+        <span class="trust-text"><strong>Hỗ trợ</strong> trực tiếp qua Zalo</span>
+      </div>
     </div>
-    
-    <div class="screenshots-grid">
-      <!-- Card 1: Dashboard - ADMIN THAY ĐỔI SRC Ở ĐÂY -->
-      <div class="screenshot-card">
-        <div class="screenshot-image">
-          <img src="/images/1c3e92d9a0d92e8777c8.jpg" alt="Dashboard Tổng Quan - Phần mềm Quản lý Bán hàng">
-          <!-- Nếu chưa có ảnh, sẽ hiển thị placeholder bên dưới -->
-          <!-- <span class="screenshot-placeholder">📊</span> -->
-        </div>
-        <div class="screenshot-info">
-          <h3>Dashboard Tổng Quan</h3>
-          <p>Theo dõi doanh thu, tồn kho, đơn hàng và các chỉ số quan trọng trong một màn hình duy nhất</p>
-        </div>
-      </div>
-      
-      <!-- Card 2: Sản phẩm - ADMIN THAY ĐỔI SRC Ở ĐÂY -->
-      <div class="screenshot-card">
-        <div class="screenshot-image">
-          <img src="/images/1e73fe4fc84f46111f5e.jpg" alt="Quản lý Sản phẩm - Phần mềm Quản lý Kho">
-          <!-- <span class="screenshot-placeholder">🧩</span> -->
-        </div>
-        <div class="screenshot-info">
-          <h3>Quản Lý Sản Phẩm</h3>
-          <p>Thêm, sửa, xóa sản phẩm dễ dàng với giao diện trực quan. Upload hình ảnh, quản lý giá và tồn kho</p>
-        </div>
-      </div>
-      
-      <!-- Card 3: Kho hàng - ADMIN THAY ĐỔI SRC Ở ĐÂY -->
-      <div class="screenshot-card">
-        <div class="screenshot-image">
-          <img src="/images/26e41bcd2dcda393fadc.jpg" alt="Quản lý Kho hàng - Nhập xuất tồn">
-          <!-- <span class="screenshot-placeholder">📦</span> -->
-        </div>
-        <div class="screenshot-info">
-          <h3>Quản Lý Kho Hàng</h3>
-          <p>Nhập - xuất - tồn kho chính xác. Cảnh báo sản phẩm sắp hết, lịch sử giao dịch chi tiết</p>
-        </div>
-      </div>
-      
-      <!-- Card 4: Đơn hàng - ADMIN THAY ĐỔI SRC Ở ĐÂY -->
-      <div class="screenshot-card">
-        <div class="screenshot-image">
-          <img src="/images/3ac1fb14cd14434a1a05.jpg" alt="Quản lý Đơn hàng - Bán hàng">
-          <!-- <span class="screenshot-placeholder">🛒</span> -->
-        </div>
-        <div class="screenshot-info">
-          <h3>Quản Lý Đơn Hàng</h3>
-          <p>Tạo đơn hàng nhanh chóng, theo dõi trạng thái, tự động cập nhật tồn kho khi hoàn thành</p>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section class="how-section" id="how-it-works">
+  <div class="container">
+    <div class="text-center" style="margin-bottom:0">
+      <div class="section-tag tag-orange">Cách hoạt động</div>
+      <div class="section-title">Hai luồng nghiệp vụ, một hệ thống</div>
+      <p class="section-sub center">Khách hàng và nhân viên vận hành trên hai giao diện riêng biệt, đồng bộ dữ liệu theo thời gian thực.</p>
+    </div>
+    <div class="how-grid">
+      <!-- Customer side -->
+      <div>
+        <div class="how-side-label" style="color: var(--accent);">📱 Luồng khách hàng (Order Menu)</div>
+        <div class="how-steps">
+          <div class="how-step">
+            <div class="how-num num-orange">1</div>
+            <div class="how-step-content">
+              <h4>Quét mã QR tại bàn</h4>
+              <p>Mỗi bàn có một mã QR riêng. Khách dùng điện thoại quét để mở thực đơn — không cần tải app.</p>
+            </div>
+          </div>
+          <div class="how-step">
+            <div class="how-num num-orange">2</div>
+            <div class="how-step-content">
+              <h4>Xem thực đơn &amp; chọn món</h4>
+              <p>Thực đơn hiển thị đẹp theo danh mục. Tìm kiếm nhanh, thêm vào giỏ, điền ghi chú đặc biệt.</p>
+            </div>
+          </div>
+          <div class="how-step">
+            <div class="how-num num-orange">3</div>
+            <div class="how-step-content">
+              <h4>Gửi đơn hàng</h4>
+              <p>Nhấn gửi đơn — đơn hàng kèm số bàn được ghi vào hệ thống ngay lập tức, không cần nhân viên.</p>
+            </div>
+          </div>
         </div>
       </div>
-      
-      <!-- Card 5: Báo cáo - ADMIN THAY ĐỔI SRC Ở ĐÂY -->
-      <div class="screenshot-card">
-        <div class="screenshot-image">
-          <img src="/images/64bced62de62503c0973.jpg" alt="Báo cáo Thống kê - Doanh thu">
-          <!-- <span class="screenshot-placeholder">📈</span> -->
-        </div>
-        <div class="screenshot-info">
-          <h3>Báo Cáo & Thống Kê</h3>
-          <p>Biểu đồ doanh thu theo thời gian, phân tích sản phẩm bán chạy, báo cáo lợi nhuận</p>
-        </div>
-      </div>
-      
-      <!-- Card 6: Cài đặt - ADMIN THAY ĐỔI SRC Ở ĐÂY -->
-      <div class="screenshot-card">
-        <div class="screenshot-image">
-          <img src="/images/Screenshot%20from%202026-02-06%2016-15-58.png" alt="Cài đặt Hệ thống">
-          <!-- <span class="screenshot-placeholder">⚙️</span> -->
-        </div>
-        <div class="screenshot-info">
-          <h3>Cài Đặt & Tùy Chỉnh</h3>
-          <p>Quản lý thông tin shop, tài khoản người dùng, cấu hình hệ thống theo nhu cầu</p>
+      <!-- Admin side -->
+      <div>
+        <div class="how-side-label" style="color: var(--teal);">🖥️ Luồng quản lý (Admin Panel)</div>
+        <div class="how-steps">
+          <div class="how-step">
+            <div class="how-num num-teal">1</div>
+            <div class="how-step-content">
+              <h4>Nhận thông báo đơn mới</h4>
+              <p>Khi có đơn từ bàn, hệ thống gửi thông báo tức thì đến thu ngân và bếp. Không bỏ sót đơn hàng.</p>
+            </div>
+          </div>
+          <div class="how-step">
+            <div class="how-num num-teal">2</div>
+            <div class="how-step-content">
+              <h4>Xử lý &amp; cập nhật trạng thái</h4>
+              <p>Xác nhận, chế biến, hoàn thành đơn. Tồn kho tự động trừ khi đơn được đánh dấu hoàn tất.</p>
+            </div>
+          </div>
+          <div class="how-step">
+            <div class="how-num num-teal">3</div>
+            <div class="how-step-content">
+              <h4>Theo dõi doanh thu &amp; báo cáo</h4>
+              <p>Dashboard realtime: doanh thu hôm nay, tháng này, sản phẩm bán chạy, cảnh báo tồn kho thấp.</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<section class="features-section">
+<!-- WORKFLOW DIAGRAM -->
+<section class="workflow-section" style="padding-top:0;">
   <div class="container">
-    <div class="section-header">
-      <h2>✨ Tính Năng Nổi Bật</h2>
-      <p>Tất cả những gì bạn cần để quản lý cửa hàng hiệu quả</p>
+    <div class="text-center" style="margin-bottom:56px;">
+      <div class="section-tag tag-teal">Luồng dữ liệu</div>
+      <div class="section-title">Từ bàn khách đến báo cáo — tự động</div>
     </div>
-    
+    <div class="workflow-diagram">
+      <div class="wf-node">
+        <span class="wf-icon">📱</span>
+        <div class="wf-label">Khách gọi món</div>
+        <div class="wf-sub">Quét QR · Chọn món</div>
+      </div>
+      <div class="wf-arrow">→</div>
+      <div class="wf-node highlight">
+        <span class="wf-icon">🔔</span>
+        <div class="wf-label">Thông báo Admin</div>
+        <div class="wf-sub">Đơn mới · Realtime</div>
+      </div>
+      <div class="wf-arrow">→</div>
+      <div class="wf-node">
+        <span class="wf-icon">👨‍🍳</span>
+        <div class="wf-label">Bếp xử lý</div>
+        <div class="wf-sub">Xác nhận · Chế biến</div>
+      </div>
+      <div class="wf-arrow">→</div>
+      <div class="wf-node">
+        <span class="wf-icon">📊</span>
+        <div class="wf-label">Báo cáo &amp; KPIs</div>
+        <div class="wf-sub">Doanh thu · Tồn kho</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features-section" id="features">
+  <div class="container">
+    <div class="text-center">
+      <div class="section-tag tag-blue">Tính năng</div>
+      <div class="section-title">Đầy đủ công cụ để vận hành</div>
+      <p class="section-sub center">Từ giao diện gọi món cho khách đến bộ công cụ quản lý toàn diện cho chủ quán.</p>
+    </div>
     <div class="features-grid">
-      <div class="feature-card">
-        <div class="feature-icon">🧩</div>
-        <h3>Quản lý Sản phẩm</h3>
-        <p>Thêm, sửa, xóa sản phẩm dễ dàng. Quản lý thông tin chi tiết: giá nhập, giá bán, tồn kho, hình ảnh...</p>
+
+      <div class="feat-card">
+        <div class="feat-icon-wrap" style="background:var(--orange-dim);">📱</div>
+        <h3>Menu Order tại bàn (QR)</h3>
+        <p>Giao diện thực đơn đẹp, tốc độ cao, tối ưu cho mobile. Khách tự order không cần gọi nhân viên.</p>
+        <div class="feat-tags">
+          <span class="feat-tag">Tìm kiếm món</span>
+          <span class="feat-tag">Lọc danh mục</span>
+          <span class="feat-tag">Giỏ hàng</span>
+          <span class="feat-tag">Ghi chú đơn</span>
+        </div>
       </div>
-      
-      <div class="feature-card">
-        <div class="feature-icon">📦</div>
-        <h3>Quản lý Kho</h3>
-        <p>Theo dõi nhập - xuất - tồn kho chính xác. Kiểm tra tồn kho nhanh chóng theo mã sản phẩm.</p>
+
+      <div class="feat-card">
+        <div class="feat-icon-wrap" style="background:rgba(249,115,22,0.1);">🔔</div>
+        <h3>Thông báo đơn realtime</h3>
+        <p>Ngay khi khách gửi đơn, admin nhận cảnh báo tức thì. Không bỏ sót bàn nào dù quán đông.</p>
+        <div class="feat-tags">
+          <span class="feat-tag">Push notification</span>
+          <span class="feat-tag">Số bàn</span>
+          <span class="feat-tag">Chi tiết món</span>
+        </div>
       </div>
-      
-      <div class="feature-card">
-        <div class="feature-icon">🛒</div>
-        <h3>Quản lý Đơn hàng</h3>
-        <p>Tạo và quản lý đơn hàng với trạng thái: Mới, Hoàn thành, Hủy, Trả hàng. Tự động trừ kho khi hoàn thành.</p>
+
+      <div class="feat-card">
+        <div class="feat-icon-wrap" style="background:var(--teal-dim);">🛒</div>
+        <h3>Quản lý đơn hàng</h3>
+        <p>Xem tất cả đơn theo trạng thái: Mới · Đang xử lý · Hoàn thành · Hủy. Lọc theo bàn, thời gian.</p>
+        <div class="feat-tags">
+          <span class="feat-tag">Filter trạng thái</span>
+          <span class="feat-tag">Lịch sử đơn</span>
+          <span class="feat-tag">Export</span>
+        </div>
       </div>
-      
-      <div class="feature-card">
-        <div class="feature-icon">📊</div>
-        <h3>Báo cáo & Thống kê</h3>
-        <p>Dashboard tổng quan, báo cáo doanh thu theo ngày/tuần/tháng, giá trị tồn kho, sản phẩm sắp hết...</p>
+
+      <div class="feat-card">
+        <div class="feat-icon-wrap" style="background:var(--blue-dim);">🧩</div>
+        <h3>Quản lý sản phẩm &amp; danh mục</h3>
+        <p>Thêm sửa xóa món ăn, upload ảnh, đặt giá bán, ẩn/hiện trên menu khách. Phân danh mục rõ ràng.</p>
+        <div class="feat-tags">
+          <span class="feat-tag">Upload ảnh</span>
+          <span class="feat-tag">Ẩn/hiện món</span>
+          <span class="feat-tag">Quản lý danh mục</span>
+        </div>
       </div>
-      
-      <div class="feature-card">
-        <div class="feature-icon">☁️</div>
-        <h3>Data Bảo mật trên Google Sheets</h3>
-        <p>Tất cả dữ liệu được lưu trữ an toàn trên Google Sheets. Dễ dàng truy cập và chia sẻ mọi lúc mọi nơi.</p>
+
+      <div class="feat-card">
+        <div class="feat-icon-wrap" style="background:rgba(245,158,11,0.1);">📦</div>
+        <h3>Quản lý tồn kho</h3>
+        <p>Theo dõi nhập – xuất – tồn theo từng nguyên liệu/sản phẩm. Tự động trừ kho khi hoàn thành đơn.</p>
+        <div class="feat-tags">
+          <span class="feat-tag">Nhập kho</span>
+          <span class="feat-tag">Xuất kho</span>
+          <span class="feat-tag">Cảnh báo hết hàng</span>
+        </div>
       </div>
-      
-      <div class="feature-card">
-        <div class="feature-icon">🚀</div>
-        <h3>Giao diện Web Đẹp mắt</h3>
-        <p>Giao diện web thân thiện, hiện đại, dễ sử dụng. Không cần cài đặt phức tạp, chỉ cần trình duyệt web.</p>
+
+      <div class="feat-card">
+        <div class="feat-icon-wrap" style="background:var(--green-dim);">📊</div>
+        <h3>Báo cáo &amp; thống kê</h3>
+        <p>Dashboard 4 KPI chính: doanh thu hôm nay, số đơn, đơn chờ, hàng sắp hết. Biểu đồ ngày/tuần/tháng.</p>
+        <div class="feat-tags">
+          <span class="feat-tag">Sản phẩm bán chạy</span>
+          <span class="feat-tag">Doanh thu theo kỳ</span>
+          <span class="feat-tag">Giá trị tồn kho</span>
+        </div>
       </div>
+
     </div>
   </div>
 </section>
 
-<section class="how-it-works">
+<!-- WHY US -->
+<section class="tech-section">
   <div class="container">
-    <div class="section-header">
-      <h2>🔄 Cách Hoạt Động</h2>
-      <p>Chỉ 3 bước đơn giản để bắt đầu quản lý cửa hàng của bạn</p>
+    <div class="section-tag tag-teal">Tại sao chọn chúng tôi</div>
+    <div class="section-title" style="margin-bottom:8px;">Dễ dùng từ ngày đầu tiên</div>
+    <p class="section-sub">Không cần đào tạo phức tạp. Nhân viên học dùng trong vòng 15 phút. Chủ quán kiểm soát mọi thứ từ điện thoại.</p>
+    <div class="tech-grid">
+      <div class="tech-pill"><span>⚡</span> Cài đặt trong 5 phút</div>
+      <div class="tech-pill"><span>📱</span> Dùng ngay trên điện thoại</div>
+      <div class="tech-pill"><span>🔔</span> Thông báo đơn tức thì</div>
+      <div class="tech-pill"><span>🔒</span> Dữ liệu riêng tư, an toàn</div>
+      <div class="tech-pill"><span>🌐</span> Truy cập mọi lúc, mọi nơi</div>
+      <div class="tech-pill"><span>💬</span> Hỗ trợ trực tiếp qua Zalo</div>
+      <div class="tech-pill"><span>🔄</span> Cập nhật tính năng liên tục</div>
     </div>
-    
-    <div class="steps">
-      <div class="step">
-        <div class="step-number">1</div>
-        <h3>Tạo Shop</h3>
-        <p>Điền thông tin shop và tạo tài khoản admin. Hệ thống sẽ tự động tạo Google Sheet cho bạn.</p>
+  </div>
+</section>
+
+<!-- PLANS -->
+<section class="plans-section" id="plans">
+  <div class="container">
+    <div class="text-center">
+      <div class="section-tag tag-green">Gói sử dụng</div>
+      <div class="section-title">Miễn phí để bắt đầu</div>
+      <p class="section-sub center">Không cần thẻ tín dụng. Nâng cấp khi cần thêm tính năng nâng cao.</p>
+    </div>
+    <div class="plans-grid">
+      <div class="plan-card">
+        <div class="plan-name">Basic</div>
+        <div class="plan-price">Miễn phí <sub></sub></div>
+        <div class="plan-desc">Đủ dùng cho quán vừa và nhỏ muốn bắt đầu số hóa</div>
+        <div class="plan-features">
+          <div class="plan-feat"><span class="check">✓</span> Menu order QR tại bàn</div>
+          <div class="plan-feat"><span class="check">✓</span> Quản lý sản phẩm &amp; danh mục</div>
+          <div class="plan-feat"><span class="check">✓</span> Nhận đơn hàng từ khách</div>
+          <div class="plan-feat"><span class="check">✓</span> Quản lý khách hàng</div>
+          <div class="plan-feat dim"><span class="check">–</span> Quản lý tồn kho</div>
+          <div class="plan-feat dim"><span class="check">–</span> Báo cáo doanh thu chi tiết</div>
+        </div>
+        <a href="/admin/create-shop.html" class="btn-plan outline">Tạo shop miễn phí</a>
       </div>
-      
-      <div class="step">
-        <div class="step-number">2</div>
-        <h3>Quản lý Sản phẩm</h3>
-        <p>Thêm sản phẩm, nhập kho, tạo đơn hàng. Tất cả được lưu trữ và đồng bộ trên Google Sheets.</p>
-      </div>
-      
-      <div class="step">
-        <div class="step-number">3</div>
-        <h3>Xem Báo cáo</h3>
-        <p>Theo dõi doanh thu, tồn kho, và các thống kê quan trọng khác trong trang báo cáo.</p>
+      <div class="plan-card featured">
+        <div class="plan-badge">Phổ biến nhất</div>
+        <div class="plan-name">Pro</div>
+        <div class="plan-price">$10 <sub>/tháng</sub></div>
+        <div class="plan-desc">Toàn bộ tính năng cho nhà hàng vận hành chuyên nghiệp</div>
+        <div class="plan-features">
+          <div class="plan-feat"><span class="check">✓</span> Tất cả tính năng Basic</div>
+          <div class="plan-feat"><span class="check">✓</span> Quản lý tồn kho &amp; nhập xuất</div>
+          <div class="plan-feat"><span class="check">✓</span> Báo cáo doanh thu đầy đủ</div>
+          <div class="plan-feat"><span class="check">✓</span> Quản lý khách hàng (CRM)</div>
+          <div class="plan-feat"><span class="check">✓</span> Cảnh báo tồn kho thấp tự động</div>
+          <div class="plan-feat"><span class="check">✓</span> Hỗ trợ ưu tiên qua Zalo</div>
+        </div>
+        <a href="/admin/create-shop.html" class="btn-plan primary">Bắt đầu dùng Pro →</a>
       </div>
     </div>
   </div>
 </section>
 
+<!-- CTA -->
 <section class="cta-section">
+  <div class="cta-bg"></div>
   <div class="container">
-    <div class="cta-content">
-      <h2>Sẵn sàng bắt đầu?</h2>
-      <p>Tạo shop miễn phí ngay hôm nay và trải nghiệm quản lý cửa hàng chuyên nghiệp</p>
-      <div class="cta-buttons">
-        <a href="/admin/create-shop.html" class="btn-cta btn-cta-primary">
-          <span>✨</span> Tạo Shop Miễn Phí
-        </a>
-        <a href="/admin/products.html" class="btn-cta btn-cta-secondary">
-          <span>🔐</span> Đăng Nhập Ngay
-        </a>
+    <div class="cta-box">
+      <h2>Sẵn sàng số hóa quán của bạn?</h2>
+      <p>Chỉ mất 5 phút để cài đặt. Không cần kỹ thuật, không cần phần cứng — chỉ cần điện thoại và Google tài khoản.</p>
+      <div class="cta-btns">
+        <a href="/admin/create-shop.html" class="btn-primary" style="font-size:1rem; padding:16px 32px;">✨ Tạo shop miễn phí ngay</a>
+        <a href="https://cuongnx56.github.io/order-menu/index.html?api_key=bb90c3e7-c5bf-4276-9539-3a509667c540" class="btn-outline" style="font-size:1rem; padding:16px 32px;" target="_blank">📱 Xem demo thực đơn</a>
       </div>
     </div>
   </div>
 </section>
 
-<footer class="footer">
+<!-- FOOTER -->
+<footer>
   <div class="container">
-    <div style="margin-bottom: 20px;">
-      <a href="/bai-viet/" style="color: #94a3b8; text-decoration: none; margin: 0 15px; font-size: 0.95rem; transition: color 0.2s;" onmouseover="this.style.color='#667eea'" onmouseout="this.style.color='#94a3b8'">📰 Blog</a>
-      <a href="/admin/create-shop.html" style="color: #94a3b8; text-decoration: none; margin: 0 15px; font-size: 0.95rem; transition: color 0.2s;" onmouseover="this.style.color='#667eea'" onmouseout="this.style.color='#94a3b8'">✨ Tạo Shop</a>
-      <a href="/admin/products.html" style="color: #94a3b8; text-decoration: none; margin: 0 15px; font-size: 0.95rem; transition: color 0.2s;" onmouseover="this.style.color='#667eea'" onmouseout="this.style.color='#94a3b8'">🔐 Đăng nhập</a>
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <div class="nav-logo-icon" style="width:30px;height:30px;font-size:0.9rem;">🍜</div>
+        <div>
+          <div class="footer-brand-name">QuanLyKho</div>
+          <div class="footer-tagline">Order tại bàn &amp; Quản lý nhà hàng thông minh</div>
+        </div>
+      </div>
+      <div class="footer-right">
+        <div>Phần mềm mã nguồn mở · Miễn phí sử dụng</div>
+        <div style="margin-top:4px;"><a href="/admin/create-shop.html">Tạo shop</a> · <a href="https://cuongnx56.github.io/order-menu/index.html?api_key=bb90c3e7-c5bf-4276-9539-3a509667c540" target="_blank">Demo menu</a> · <a href="/admin/products.html">Đăng nhập</a></div>
+      </div>
     </div>
-    <p class="footer-text">Phần mềm quản lý bán hàng & tồn kho</p>
+
   </div>
 </footer>
 
