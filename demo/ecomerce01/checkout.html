@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thanh toán - AirPure</title>
+  <meta name="description" content="Thanh toán đơn hàng - AirPure">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="container">
+      <div class="header-content">
+        <a href="index.html" class="logo">🌬️ AirPure</a>
+        <nav class="header-nav">
+          <div class="nav-menu">
+            <div class="nav-item dropdown">
+              <button class="dropdown-toggle" id="categories-dropdown">
+                Danh mục <span class="dropdown-arrow">▼</span>
+              </button>
+              <div class="dropdown-menu" id="categories-menu">
+                <a href="index.html" class="dropdown-item">Tất cả sản phẩm</a>
+                <div class="dropdown-divider"></div>
+              </div>
+            </div>
+            <a href="index.html" class="nav-item">Trang chủ</a>
+            <a href="cart.html" class="nav-item">Giỏ hàng</a>
+          </div>
+          <button class="cart-toggle" id="cart-toggle">
+            <span class="cart-icon">🛒</span>
+            <span class="cart-badge" id="cart-badge">0</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main">
+    <div class="container">
+      <!-- Breadcrumb -->
+      <nav class="breadcrumb">
+        <a href="index.html">Trang chủ</a>
+        <span> / </span>
+        <a href="cart.html">Giỏ hàng</a>
+        <span> / </span>
+        <span>Thanh toán</span>
+      </nav>
+
+      <div class="checkout-page">
+        <h1 class="page-title">Thanh toán</h1>
+
+        <!-- Empty Cart Warning -->
+        <div id="empty-cart-warning" class="empty-cart-warning" style="display: none;">
+          <div class="warning-icon">⚠️</div>
+          <h2>Giỏ hàng trống</h2>
+          <p>Vui lòng thêm sản phẩm vào giỏ hàng trước khi thanh toán</p>
+          <a href="index.html" class="btn-primary">Tiếp tục mua sắm</a>
+        </div>
+
+        <!-- Checkout Form -->
+        <div id="checkout-content" class="checkout-content">
+          <div class="checkout-grid">
+            <!-- Order Summary -->
+            <div class="checkout-summary">
+              <h2>Đơn hàng của bạn</h2>
+              <div id="checkout-items" class="checkout-items">
+                <!-- Items will be populated by JavaScript -->
+              </div>
+              <div class="checkout-totals">
+                <div class="total-row">
+                  <span>Tạm tính:</span>
+                  <span id="checkout-subtotal">0₫</span>
+                </div>
+                <div class="total-row">
+                  <span>Phí vận chuyển:</span>
+                  <span>Miễn phí</span>
+                </div>
+                <div class="total-divider"></div>
+                <div class="total-row total-final">
+                  <span>Tổng cộng:</span>
+                  <span id="checkout-total">0₫</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Customer Info Form -->
+            <div class="checkout-form-section">
+              <h2>Thông tin giao hàng</h2>
+              <form id="checkout-form" class="checkout-form-full">
+                <div class="form-group">
+                  <label for="customer-name">Họ tên *</label>
+                  <input 
+                    type="text" 
+                    id="customer-name" 
+                    required 
+                    placeholder="Nhập họ tên"
+                    class="form-input"
+                  >
+                </div>
+                
+                <div class="form-group">
+                  <label for="customer-phone">Số điện thoại *</label>
+                  <input 
+                    type="tel" 
+                    id="customer-phone" 
+                    required 
+                    placeholder="Nhập số điện thoại"
+                    class="form-input"
+                  >
+                </div>
+                
+                <div class="form-group">
+                  <label for="customer-email">Email</label>
+                  <input 
+                    type="email" 
+                    id="customer-email" 
+                    placeholder="Nhập email (tùy chọn)"
+                    class="form-input"
+                  >
+                </div>
+
+                <div class="form-group">
+                  <label for="shipping-address">Địa chỉ giao hàng *</label>
+                  <textarea 
+                    id="shipping-address" 
+                    required 
+                    placeholder="Nhập địa chỉ giao hàng"
+                    rows="3"
+                    class="form-textarea"
+                  ></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="shipping-city">Thành phố/Tỉnh</label>
+                  <input 
+                    type="text" 
+                    id="shipping-city" 
+                    placeholder="Nhập thành phố/tỉnh"
+                    class="form-input"
+                  >
+                </div>
+
+                <div class="form-group">
+                  <label for="shipping-zipcode">Mã bưu điện</label>
+                  <input 
+                    type="text" 
+                    id="shipping-zipcode" 
+                    placeholder="Nhập mã bưu điện (tùy chọn)"
+                    class="form-input"
+                  >
+                </div>
+
+                <div class="form-group">
+                  <label for="shipping-note">Ghi chú giao hàng (tùy chọn)</label>
+                  <textarea 
+                    id="shipping-note" 
+                    placeholder="Ví dụ: Giao hàng trong giờ hành chính, gọi trước khi giao, để tại cửa..."
+                    rows="2"
+                    class="form-textarea"
+                  ></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label for="customer-note">Ghi chú đơn hàng (tùy chọn)</label>
+                  <textarea 
+                    id="customer-note" 
+                    placeholder="Ghi chú thêm cho đơn hàng"
+                    rows="2"
+                    class="form-textarea"
+                  ></textarea>
+                </div>
+
+                <div class="form-actions-checkout">
+                  <a href="cart.html" class="btn-back-cart">← Quay lại giỏ hàng</a>
+                  <button type="submit" class="btn-submit-checkout" id="submit-checkout-btn">
+                    Xác nhận đặt hàng
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <div id="footer-placeholder"></div>
+
+  <!-- Scripts -->
+  <script src="common.js"></script>
+  <script src="shop-api.js"></script>
+  <script>
+    // Load footer
+    fetch('footer.html')
+      .then(res => res.text())
+      .then(html => {
+        document.getElementById('footer-placeholder').innerHTML = html;
+        // Initialize subscribe form after footer is loaded
+        if (typeof initFooterSubscribeForm === 'function') {
+          initFooterSubscribeForm();
+        }
+        // Initialize contact form after footer is loaded
+        if (typeof initFooterContactForm === 'function') {
+          initFooterContactForm();
+        }
+      })
+      .catch(err => console.error('Error loading footer:', err));
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      shopAPI = initShopAPI();
+      cart = JSON.parse(localStorage.getItem('shop_cart') || '[]');
+      updateCartBadge();
+      
+      // Load categories (with small delay to ensure DOM is ready)
+      setTimeout(() => {
+        if (typeof loadAndRenderCategories === 'function') {
+          loadAndRenderCategories();
+        }
+      }, 100);
+
+      if (cart.length === 0) {
+        document.getElementById('empty-cart-warning').style.display = 'block';
+        document.getElementById('checkout-content').style.display = 'none';
+        return;
+      }
+
+      renderCheckout();
+      setupForm();
+    });
+
+    function renderCheckout() {
+      const checkoutItems = document.getElementById('checkout-items');
+      const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+
+      checkoutItems.innerHTML = cart.map(item => `
+        <div class="checkout-item">
+          ${item.image ? `<img src="${item.image}" alt="${escapeHtml(item.name)}" class="checkout-item-image">` : '<div class="checkout-item-placeholder">📦</div>'}
+          <div class="checkout-item-info">
+            <h3>${escapeHtml(item.name)}</h3>
+            <div class="checkout-item-details">
+              <span>${formatPrice(item.price)} × ${item.qty}</span>
+            </div>
+          </div>
+          <div class="checkout-item-total">${formatPrice(item.price * item.qty)}</div>
+        </div>
+      `).join('');
+
+      document.getElementById('checkout-subtotal').textContent = formatPrice(subtotal);
+      document.getElementById('checkout-total').textContent = formatPrice(subtotal);
+    }
+
+    function setupForm() {
+      document.getElementById('checkout-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const name = document.getElementById('customer-name').value.trim();
+        const phone = document.getElementById('customer-phone').value.trim();
+        const email = document.getElementById('customer-email').value.trim();
+        const shippingAddress = document.getElementById('shipping-address').value.trim();
+        const shippingCity = document.getElementById('shipping-city').value.trim();
+        const shippingZipcode = document.getElementById('shipping-zipcode').value.trim();
+        const shippingNote = document.getElementById('shipping-note').value.trim();
+        const customerNote = document.getElementById('customer-note').value.trim();
+        
+        if (!name || !phone || !shippingAddress) {
+          showToast('Vui lòng nhập đầy đủ thông tin bắt buộc', 'error');
+          return;
+        }
+        
+        const submitBtn = document.getElementById('submit-checkout-btn');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Đang xử lý...';
+        
+        try {
+          // 1. Create customer
+          console.log('Creating customer with data:', { name, phone, email });
+          const customer = await shopAPI.createCustomer({ name, phone, email });
+          console.log('Customer created:', customer);
+          
+          if (!customer || !customer.id) {
+            throw new Error('Failed to create customer: No customer ID returned');
+          }
+          
+          // 2. Create order
+          const orderItems = cart.map(item => ({
+            product_id: item.id,
+            price: item.price,
+            qty: item.qty
+          }));
+          
+          // Build shipping_info as JSON object
+          const shippingInfo = {
+            address: shippingAddress,
+            city: shippingCity || undefined,
+            zipcode: shippingZipcode || undefined,
+            note: shippingNote || undefined
+          };
+          
+          // Remove undefined fields
+          Object.keys(shippingInfo).forEach(key => {
+            if (shippingInfo[key] === undefined) {
+              delete shippingInfo[key];
+            }
+          });
+          
+          // ✅ Include customer info for queue processing
+          // If customer.id is temp, GAS can resolve it using phone/email
+          const order = await shopAPI.createOrder({
+            customer_id: customer.id,
+            // Include customer info for resolution if customer_id is temp
+            customer_name: name,
+            customer_phone: phone,
+            customer_email: email,
+            items: orderItems,
+            created_at: formatDateForGAS(new Date()),
+            note: customerNote || undefined,
+            shipping_info: shippingInfo
+          });
+          
+          // Clear cart
+          cart = [];
+          saveCart();
+          updateCartBadge();
+          
+          // Redirect to success page
+          const orderId = order.id || 'N/A';
+          window.location.href = `success.html?order_id=${orderId}`;
+          
+        } catch (error) {
+          console.error('Checkout error:', error);
+          showToast(error.message || 'Đặt hàng thất bại. Vui lòng thử lại.', 'error');
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Xác nhận đặt hàng';
+        }
+      });
+    }
+
+  </script>
+</body>
+</html>

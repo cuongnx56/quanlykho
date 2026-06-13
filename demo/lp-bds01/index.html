@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vinhomes Smart City - Liền Kề & Shophouse Đẳng Cấp</title>
+    <meta name="description" content="Sở hữu ngay liền kề, shophouse tại Vinhomes Smart City - Khu đô thị thông minh đầu tiên tại Việt Nam">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- AOS Animation -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Shop API -->
+    <script src="shop-api.js" defer></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+        
+        .font-playfair {
+            font-family: 'Playfair Display', serif;
+        }
+        
+        /* Hero Video Background */
+        .hero-overlay {
+            background: linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(29,78,216,0.5) 100%);
+        }
+        
+        /* Gradient Text */
+        .gradient-text {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        /* Parallax Effect */
+        .parallax {
+            background-attachment: fixed;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: cover;
+        }
+        
+        /* Floating Animation */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        .float {
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        /* Shine Effect */
+        @keyframes shine {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        
+        .shine-effect {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .shine-effect::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shine 3s infinite;
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #1d4ed8;
+            border-radius: 5px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #1e40af;
+        }
+        
+        /* Navbar Scroll Effect */
+        .navbar-scrolled {
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+        }
+        
+        /* Card Hover Effect */
+        .card-hover {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        
+        /* Button Ripple Effect */
+        .btn-ripple {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-ripple::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.5);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        .btn-ripple:hover::after {
+            width: 300px;
+            height: 300px;
+        }
+        
+        /* Number Counter Animation */
+        @keyframes countUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .count-animation {
+            animation: countUp 1s ease-out;
+        }
+        
+        /* Image Zoom on Hover */
+        .zoom-hover {
+            overflow: hidden;
+        }
+        
+        .zoom-hover img {
+            transition: transform 0.5s ease;
+        }
+        
+        .zoom-hover:hover img {
+            transform: scale(1.1);
+        }
+        
+        /* Form Input Focus */
+        .form-input {
+            transition: all 0.3s ease;
+        }
+        
+        .form-input:focus {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(29,78,216,0.3);
+        }
+        
+        /* Modal Animation */
+        .modal-enter {
+            animation: modalEnter 0.3s ease-out;
+        }
+        
+        @keyframes modalEnter {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        /* Success Animation */
+        @keyframes successPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .success-icon {
+            animation: successPulse 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body class="antialiased">
+    
+    <!-- Navigation -->
+    <nav id="navbar" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-transparent">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between py-4">
+                <div class="flex items-center space-x-2" data-aos="fade-right">
+                    <i class="fas fa-city text-3xl text-yellow-500"></i>
+                    <span class="text-2xl font-bold text-white navbar-scrolled-text">Vinhomes <span class="gradient-text">Smart City</span></span>
+                </div>
+                
+                <div class="hidden md:flex items-center space-x-8" data-aos="fade-left">
+                    <a href="#features" class="text-white hover:text-yellow-500 transition navbar-scrolled-text">Đặc điểm</a>
+                    <a href="#location" class="text-white hover:text-yellow-500 transition navbar-scrolled-text">Vị trí</a>
+                    <a href="#utilities" class="text-white hover:text-yellow-500 transition navbar-scrolled-text">Tiện ích</a>
+                    <a href="#gallery" class="text-white hover:text-yellow-500 transition navbar-scrolled-text">Thư viện</a>
+                    <a href="#contact" class="bg-yellow-500 text-gray-900 px-6 py-2 rounded-full font-semibold hover:bg-yellow-600 transition btn-ripple">
+                        Liên hệ ngay
+                    </a>
+                </div>
+                
+                <button id="mobile-menu-btn" class="md:hidden text-white text-2xl navbar-scrolled-text">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white shadow-lg">
+            <div class="container mx-auto px-4 py-4 space-y-3">
+                <a href="#features" class="block py-2 text-gray-700 hover:text-blue-600 transition">Đặc điểm</a>
+                <a href="#location" class="block py-2 text-gray-700 hover:text-blue-600 transition">Vị trí</a>
+                <a href="#utilities" class="block py-2 text-gray-700 hover:text-blue-600 transition">Tiện ích</a>
+                <a href="#gallery" class="block py-2 text-gray-700 hover:text-blue-600 transition">Thư viện</a>
+                <a href="#contact" class="block bg-yellow-500 text-gray-900 px-6 py-3 rounded-full font-semibold text-center hover:bg-yellow-600 transition">
+                    Liên hệ ngay
+                </a>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Hero Section -->
+    <section class="relative h-screen flex items-center justify-center overflow-hidden">
+        <!-- Background Image with Parallax -->
+        <div class="absolute inset-0 parallax" style="background-image: url('https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1920'); z-index: -1;"></div>
+        <div class="absolute inset-0 hero-overlay"></div>
+        
+        <div class="container mx-auto px-4 text-center relative z-10">
+            <h1 class="text-5xl md:text-7xl font-bold font-playfair text-white mb-6" data-aos="fade-up">
+                Vinhomes <span class="gradient-text">Smart City</span>
+            </h1>
+            <p class="text-xl md:text-2xl text-white mb-4" data-aos="fade-up" data-aos-delay="100">
+                Liền kề & Shophouse - Nơi Cuộc Sống Thăng Hoa
+            </p>
+            <p class="text-lg md:text-xl text-gray-200 mb-8 max-w-3xl mx-auto" data-aos="fade-up" data-aos-delay="200">
+                Đầu tư sinh lời bền vững tại khu đô thị thông minh đầu tiên Việt Nam
+            </p>
+            
+            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center" data-aos="fade-up" data-aos-delay="300">
+                <a href="#contact" class="bg-yellow-500 text-gray-900 px-8 py-4 rounded-full font-bold text-lg hover:bg-yellow-600 transition transform hover:scale-105 btn-ripple shine-effect">
+                    <i class="fas fa-phone-alt mr-2"></i> Đăng ký tư vấn ngay
+                </a>
+                <a href="#gallery" class="bg-transparent border-2 border-white text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-white hover:text-gray-900 transition transform hover:scale-105">
+                    <i class="fas fa-play-circle mr-2"></i> Xem video
+                </a>
+            </div>
+            
+            <!-- Scroll Down Indicator -->
+            <div class="absolute bottom-10 left-1/2 transform -translate-x-1/2 float" data-aos="fade-up" data-aos-delay="400">
+                <i class="fas fa-chevron-down text-white text-3xl animate-bounce"></i>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Stats Section -->
+    <section class="py-16 bg-gradient-to-r from-blue-900 to-blue-700">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+                <div class="text-center" data-aos="fade-up">
+                    <div class="text-5xl font-bold text-yellow-500 mb-2">
+                        <span class="counter" data-target="283">0</span>ha
+                    </div>
+                    <p class="text-white">Diện tích</p>
+                </div>
+                <div class="text-center" data-aos="fade-up" data-aos-delay="100">
+                    <div class="text-5xl font-bold text-yellow-500 mb-2">
+                        <span class="counter" data-target="15000">0</span>+
+                    </div>
+                    <p class="text-white">Căn hộ & biệt thự</p>
+                </div>
+                <div class="text-center" data-aos="fade-up" data-aos-delay="200">
+                    <div class="text-5xl font-bold text-yellow-500 mb-2">
+                        <span class="counter" data-target="50">0</span>+
+                    </div>
+                    <p class="text-white">Tiện ích đẳng cấp</p>
+                </div>
+                <div class="text-center" data-aos="fade-up" data-aos-delay="300">
+                    <div class="text-5xl font-bold text-yellow-500 mb-2">
+                        <span class="counter" data-target="100">0</span>%
+                    </div>
+                    <p class="text-white">An tâm đầu tư</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Features Section -->
+    <section id="features" class="py-20 bg-gray-50">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16" data-aos="fade-up">
+                <h2 class="text-4xl md:text-5xl font-bold font-playfair text-gray-900 mb-4">
+                    Đặc Điểm <span class="gradient-text">Nổi Bật</span>
+                </h2>
+                <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                    Sở hữu ngay những sản phẩm bất động sản đẳng cấp với thiết kế hiện đại
+                </p>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Feature 1 -->
+                <div class="bg-white p-8 rounded-2xl shadow-lg card-hover" data-aos="fade-up">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-6">
+                        <i class="fas fa-home text-3xl text-blue-600"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4 text-gray-900">Liền Kề Cao Cấp</h3>
+                    <p class="text-gray-600 mb-4">
+                        Diện tích từ 90-150m², thiết kế 3-4 tầng hiện đại, thoáng đãng với không gian sống lý tưởng cho gia đình.
+                    </p>
+                    <ul class="space-y-2 text-gray-600">
+                        <li><i class="fas fa-check text-green-500 mr-2"></i> Sân vườn riêng biệt</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i> Chỗ đậu xe ô tô</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i> Hệ thống Smart Home</li>
+                    </ul>
+                </div>
+                
+                <!-- Feature 2 -->
+                <div class="bg-white p-8 rounded-2xl shadow-lg card-hover" data-aos="fade-up" data-aos-delay="100">
+                    <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-6">
+                        <i class="fas fa-store text-3xl text-yellow-600"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4 text-gray-900">Shophouse Kinh Doanh</h3>
+                    <p class="text-gray-600 mb-4">
+                        Vị trí đắc địa, mặt tiền rộng, thiết kế linh hoạt phù hợp mọi ngành nghề kinh doanh.
+                    </p>
+                    <ul class="space-y-2 text-gray-600">
+                        <li><i class="fas fa-check text-green-500 mr-2"></i> Mặt tiền 5-7m</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i> Vị trí trung tâm</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i> Lưu lượng khách cao</li>
+                    </ul>
+                </div>
+                
+                <!-- Feature 3 -->
+                <div class="bg-white p-8 rounded-2xl shadow-lg card-hover" data-aos="fade-up" data-aos-delay="200">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-6">
+                        <i class="fas fa-chart-line text-3xl text-green-600"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4 text-gray-900">Đầu Tư Sinh Lời</h3>
+                    <p class="text-gray-600 mb-4">
+                        Tăng trưởng giá trị vượt trội, tiềm năng cho thuê cao với mức sinh lời 8-12%/năm.
+                    </p>
+                    <ul class="space-y-2 text-gray-600">
+                        <li><i class="fas fa-check text-green-500 mr-2"></i> Pháp lý minh bạch</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i> Bàn giao hoàn thiện</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i> Hỗ trợ vay 70%</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Location Section -->
+    <section id="location" class="py-20 bg-white">
+        <div class="container mx-auto px-4">
+            <div class="grid md:grid-cols-2 gap-12 items-center">
+                <div data-aos="fade-right">
+                    <h2 class="text-4xl md:text-5xl font-bold font-playfair text-gray-900 mb-6">
+                        Vị Trí <span class="gradient-text">Vàng</span>
+                    </h2>
+                    <p class="text-xl text-gray-600 mb-6">
+                        Tọa lạc tại khu đô thị Vinhomes Smart City, Đại Mỗ, Nam Từ Liêm, Hà Nội
+                    </p>
+                    
+                    <div class="space-y-4">
+                        <div class="flex items-start space-x-4">
+                            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-map-marker-alt text-blue-600"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-900 mb-1">Kết nối giao thông</h4>
+                                <p class="text-gray-600">5 phút tới vành đai 3, 15 phút tới sân bay Nội Bài, 10 phút tới trung tâm Mỹ Đình</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start space-x-4">
+                            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-graduation-cap text-green-600"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-900 mb-1">Giáo dục đẳng cấp</h4>
+                                <p class="text-gray-600">Hệ thống trường quốc tế Vinschool, British International School</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start space-x-4">
+                            <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-hospital text-purple-600"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-900 mb-1">Y tế chất lượng</h4>
+                                <p class="text-gray-600">Bệnh viện đa khoa quốc tế Vinmec, phòng khám 24/7</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="zoom-hover rounded-2xl overflow-hidden shadow-2xl" data-aos="fade-left">
+                    <img src="https://images.unsplash.com/photo-1577495508048-b635879837f1?w=800" alt="Location Map" class="w-full h-full object-cover">
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Utilities Section -->
+    <section id="utilities" class="py-20 bg-gradient-to-br from-blue-50 to-purple-50">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16" data-aos="fade-up">
+                <h2 class="text-4xl md:text-5xl font-bold font-playfair text-gray-900 mb-4">
+                    Tiện Ích <span class="gradient-text">Đẳng Cấp</span>
+                </h2>
+                <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                    Hơn 50+ tiện ích nội khu phục vụ mọi nhu cầu của cư dân
+                </p>
+            </div>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-white p-6 rounded-xl shadow-lg text-center card-hover" data-aos="fade-up">
+                    <i class="fas fa-swimming-pool text-5xl text-blue-500 mb-4"></i>
+                    <h4 class="font-bold text-gray-900 mb-2">Hồ bơi 4 mùa</h4>
+                    <p class="text-gray-600 text-sm">Hồ bơi Olympic tiêu chuẩn quốc tế</p>
+                </div>
+                
+                <div class="bg-white p-6 rounded-xl shadow-lg text-center card-hover" data-aos="fade-up" data-aos-delay="100">
+                    <i class="fas fa-dumbbell text-5xl text-red-500 mb-4"></i>
+                    <h4 class="font-bold text-gray-900 mb-2">Gym & Yoga</h4>
+                    <p class="text-gray-600 text-sm">Phòng gym hiện đại, studio yoga chuyên nghiệp</p>
+                </div>
+                
+                <div class="bg-white p-6 rounded-xl shadow-lg text-center card-hover" data-aos="fade-up" data-aos-delay="200">
+                    <i class="fas fa-shopping-cart text-5xl text-green-500 mb-4"></i>
+                    <h4 class="font-bold text-gray-900 mb-2">Trung tâm thương mại</h4>
+                    <p class="text-gray-600 text-sm">Vincom Mega Mall, Vinpearl Aquarium</p>
+                </div>
+                
+                <div class="bg-white p-6 rounded-xl shadow-lg text-center card-hover" data-aos="fade-up" data-aos-delay="300">
+                    <i class="fas fa-tree text-5xl text-green-600 mb-4"></i>
+                    <h4 class="font-bold text-gray-900 mb-2">Công viên xanh</h4>
+                    <p class="text-gray-600 text-sm">36ha công viên trung tâm, hồ điều hòa</p>
+                </div>
+                
+                <div class="bg-white p-6 rounded-xl shadow-lg text-center card-hover" data-aos="fade-up">
+                    <i class="fas fa-futbol text-5xl text-orange-500 mb-4"></i>
+                    <h4 class="font-bold text-gray-900 mb-2">Sân thể thao</h4>
+                    <p class="text-gray-600 text-sm">Tennis, bóng đá, bóng rổ đa năng</p>
+                </div>
+                
+                <div class="bg-white p-6 rounded-xl shadow-lg text-center card-hover" data-aos="fade-up" data-aos-delay="100">
+                    <i class="fas fa-child text-5xl text-pink-500 mb-4"></i>
+                    <h4 class="font-bold text-gray-900 mb-2">Khu vui chơi trẻ em</h4>
+                    <p class="text-gray-600 text-sm">Công viên giải trí, khu vui chơi an toàn</p>
+                </div>
+                
+                <div class="bg-white p-6 rounded-xl shadow-lg text-center card-hover" data-aos="fade-up" data-aos-delay="200">
+                    <i class="fas fa-shield-alt text-5xl text-purple-500 mb-4"></i>
+                    <h4 class="font-bold text-gray-900 mb-2">An ninh 24/7</h4>
+                    <p class="text-gray-600 text-sm">Hệ thống camera AI, bảo vệ chuyên nghiệp</p>
+                </div>
+                
+                <div class="bg-white p-6 rounded-xl shadow-lg text-center card-hover" data-aos="fade-up" data-aos-delay="300">
+                    <i class="fas fa-car text-5xl text-gray-500 mb-4"></i>
+                    <h4 class="font-bold text-gray-900 mb-2">Bãi đỗ xe thông minh</h4>
+                    <p class="text-gray-600 text-sm">Hệ thống đỗ xe tự động, an toàn</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Gallery Section -->
+    <section id="gallery" class="py-20 bg-gray-900">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16" data-aos="fade-up">
+                <h2 class="text-4xl md:text-5xl font-bold font-playfair text-white mb-4">
+                    Thư Viện <span class="gradient-text">Hình Ảnh</span>
+                </h2>
+                <p class="text-xl text-gray-300 max-w-2xl mx-auto">
+                    Khám phá vẻ đẹp kiến trúc và không gian sống đẳng cấp
+                </p>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-6">
+                <div class="zoom-hover rounded-xl overflow-hidden shadow-2xl" data-aos="fade-up">
+                    <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600" alt="Gallery 1" class="w-full h-64 object-cover">
+                </div>
+                <div class="zoom-hover rounded-xl overflow-hidden shadow-2xl" data-aos="fade-up" data-aos-delay="100">
+                    <img src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600" alt="Gallery 2" class="w-full h-64 object-cover">
+                </div>
+                <div class="zoom-hover rounded-xl overflow-hidden shadow-2xl" data-aos="fade-up" data-aos-delay="200">
+                    <img src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=600" alt="Gallery 3" class="w-full h-64 object-cover">
+                </div>
+                <div class="zoom-hover rounded-xl overflow-hidden shadow-2xl" data-aos="fade-up">
+                    <img src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=600" alt="Gallery 4" class="w-full h-64 object-cover">
+                </div>
+                <div class="zoom-hover rounded-xl overflow-hidden shadow-2xl" data-aos="fade-up" data-aos-delay="100">
+                    <img src="https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=600" alt="Gallery 5" class="w-full h-64 object-cover">
+                </div>
+                <div class="zoom-hover rounded-xl overflow-hidden shadow-2xl" data-aos="fade-up" data-aos-delay="200">
+                    <img src="https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?w=600" alt="Gallery 6" class="w-full h-64 object-cover">
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Contact Section -->
+    <section id="contact" class="py-20 bg-gradient-to-r from-blue-600 to-purple-600">
+        <div class="container mx-auto px-4">
+            <div class="max-w-4xl mx-auto">
+                <div class="text-center mb-12" data-aos="fade-up">
+                    <h2 class="text-4xl md:text-5xl font-bold font-playfair text-white mb-4">
+                        Đăng Ký Nhận Tư Vấn
+                    </h2>
+                    <p class="text-xl text-gray-100">
+                        Để lại thông tin, chúng tôi sẽ liên hệ tư vấn trong 24h
+                    </p>
+                </div>
+                
+                <div class="bg-white rounded-2xl shadow-2xl p-8 md:p-12" data-aos="fade-up" data-aos-delay="100">
+                    <form id="contactForm" class="space-y-6" action="javascript:void(0);" method="post">
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-gray-700 font-semibold mb-2">Họ và tên *</label>
+                                <input type="text" id="name" name="name" required 
+                                    class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                                    placeholder="Nguyễn Văn A">
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 font-semibold mb-2">Số điện thoại *</label>
+                                <input type="tel" id="phone" name="phone" required 
+                                    class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                                    placeholder="0912345678">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-700 font-semibold mb-2">Email</label>
+                            <input type="email" id="email" name="email" 
+                                class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                                placeholder="email@example.com">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-700 font-semibold mb-2">Loại sản phẩm quan tâm</label>
+                            <select id="product_type" name="product_type" 
+                                class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                <option value="">-- Chọn loại sản phẩm --</option>
+                                <option value="lien_ke">Liền kề</option>
+                                <option value="shophouse">Shophouse</option>
+                                <option value="biet_thu">Biệt thủ</option>
+                                <option value="can_ho">Căn hộ</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-700 font-semibold mb-2">Ghi chú</label>
+                            <textarea id="note" name="note" rows="4" 
+                                class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                                placeholder="Thời gian thuận tiện để liên hệ..."></textarea>
+                        </div>
+                        
+                        <button type="submit" 
+                            class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-lg font-bold text-lg hover:from-blue-700 hover:to-purple-700 transition transform hover:scale-105 btn-ripple shine-effect">
+                            <i class="fas fa-paper-plane mr-2"></i> Gửi thông tin đăng ký
+                        </button>
+                        
+                        <p class="text-center text-gray-600 text-sm">
+                            Bằng cách gửi form, bạn đồng ý với <a href="#" class="text-blue-600 hover:underline">chính sách bảo mật</a> của chúng tôi
+                        </p>
+                    </form>
+                    
+                    <!-- Success Message -->
+                    <div id="successMessage" class="hidden mt-6 bg-green-100 border border-green-400 text-green-700 px-6 py-4 rounded-lg">
+                        <div class="flex items-center">
+                            <i class="fas fa-check-circle text-3xl mr-4 success-icon"></i>
+                            <div>
+                                <h4 class="font-bold">Đăng ký thành công!</h4>
+                                <p>Cảm ơn bạn đã quan tâm. Chúng tôi sẽ liên hệ trong thời gian sớm nhất.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Contact Info -->
+                <div class="grid md:grid-cols-3 gap-6 mt-12">
+                    <div class="text-center text-white" data-aos="fade-up">
+                        <i class="fas fa-phone-alt text-4xl mb-3"></i>
+                        <h4 class="font-bold mb-2">Hotline</h4>
+                        <p>1900 2323</p>
+                    </div>
+                    <div class="text-center text-white" data-aos="fade-up" data-aos-delay="100">
+                        <i class="fas fa-envelope text-4xl mb-3"></i>
+                        <h4 class="font-bold mb-2">Email</h4>
+                        <p>info@vinhomes.vn</p>
+                    </div>
+                    <div class="text-center text-white" data-aos="fade-up" data-aos-delay="200">
+                        <i class="fas fa-map-marker-alt text-4xl mb-3"></i>
+                        <h4 class="font-bold mb-2">Địa chỉ</h4>
+                        <p>Đại Mỗ, Nam Từ Liêm, Hà Nội</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="container mx-auto px-4">
+            <div class="grid md:grid-cols-4 gap-8 mb-8">
+                <div>
+                    <h3 class="text-2xl font-bold mb-4 gradient-text">Vinhomes Smart City</h3>
+                    <p class="text-gray-400 mb-4">
+                        Khu đô thị thông minh đầu tiên tại Việt Nam với đầy đủ tiện ích đẳng cấp quốc tế.
+                    </p>
+                    <div class="flex space-x-4">
+                        <a href="#" class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center hover:bg-blue-700 transition">
+                            <i class="fab fa-facebook-f"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 bg-blue-400 rounded-full flex items-center justify-center hover:bg-blue-500 transition">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 bg-pink-600 rounded-full flex items-center justify-center hover:bg-pink-700 transition">
+                            <i class="fab fa-instagram"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center hover:bg-red-700 transition">
+                            <i class="fab fa-youtube"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <div>
+                    <h4 class="font-bold text-lg mb-4">Sản phẩm</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="#" class="hover:text-white transition">Liền kề</a></li>
+                        <li><a href="#" class="hover:text-white transition">Shophouse</a></li>
+                        <li><a href="#" class="hover:text-white transition">Biệt thự</a></li>
+                        <li><a href="#" class="hover:text-white transition">Căn hộ</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="font-bold text-lg mb-4">Tiện ích</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="#" class="hover:text-white transition">Trung tâm thương mại</a></li>
+                        <li><a href="#" class="hover:text-white transition">Trường học</a></li>
+                        <li><a href="#" class="hover:text-white transition">Bệnh viện</a></li>
+                        <li><a href="#" class="hover:text-white transition">Công viên</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="font-bold text-lg mb-4">Liên hệ</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><i class="fas fa-phone mr-2"></i> 1900 2323</li>
+                        <li><i class="fas fa-envelope mr-2"></i> info@vinhomes.vn</li>
+                        <li><i class="fas fa-map-marker-alt mr-2"></i> Đại Mỗ, Nam Từ Liêm, HN</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-800 pt-8 text-center text-gray-400">
+                <p>&copy; 2024 Vinhomes Smart City. All rights reserved. | <a href="#" class="hover:text-white">Chính sách bảo mật</a> | <a href="#" class="hover:text-white">Điều khoản sử dụng</a></p>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- Back to Top Button -->
+    <button id="backToTop" class="fixed bottom-8 right-8 bg-blue-600 text-white w-12 h-12 rounded-full shadow-lg hover:bg-blue-700 transition transform hover:scale-110 hidden z-50">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+    
+    <script>
+        // Initialize AOS
+        AOS.init({
+            duration: 1000,
+            once: true,
+            offset: 100
+        });
+        
+        // Navbar scroll effect
+        window.addEventListener('scroll', function() {
+            const navbar = document.getElementById('navbar');
+            const navbarTexts = document.querySelectorAll('.navbar-scrolled-text');
+            
+            if (window.scrollY > 100) {
+                navbar.classList.add('navbar-scrolled');
+                navbarTexts.forEach(text => {
+                    text.classList.remove('text-white');
+                    text.classList.add('text-gray-900');
+                });
+            } else {
+                navbar.classList.remove('navbar-scrolled');
+                navbarTexts.forEach(text => {
+                    text.classList.remove('text-gray-900');
+                    text.classList.add('text-white');
+                });
+            }
+            
+            // Back to top button
+            const backToTop = document.getElementById('backToTop');
+            if (window.scrollY > 300) {
+                backToTop.classList.remove('hidden');
+            } else {
+                backToTop.classList.add('hidden');
+            }
+        });
+        
+        // Mobile menu toggle
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+        
+        mobileMenuBtn.addEventListener('click', function() {
+            mobileMenu.classList.toggle('hidden');
+        });
+        
+        // Counter animation
+        const counters = document.querySelectorAll('.counter');
+        const speed = 200;
+        
+        const runCounter = (counter) => {
+            const target = +counter.getAttribute('data-target');
+            const count = +counter.innerText;
+            const increment = target / speed;
+            
+            if (count < target) {
+                counter.innerText = Math.ceil(count + increment);
+                setTimeout(() => runCounter(counter), 1);
+            } else {
+                counter.innerText = target;
+            }
+        };
+        
+        // Intersection Observer for counter
+        const counterObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const counter = entry.target;
+                    counter.innerText = '0';
+                    runCounter(counter);
+                    counterObserver.unobserve(counter);
+                }
+            });
+        }, { threshold: 0.5 });
+        
+        counters.forEach(counter => {
+            counterObserver.observe(counter);
+        });
+        
+        // Back to top
+        document.getElementById('backToTop').addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+        
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    // Close mobile menu if open
+                    mobileMenu.classList.add('hidden');
+                }
+            });
+        });
+        
+        // Initialize ShopAPI - ensure it's loaded
+        let shopAPI;
+        function initShopAPI() {
+            if (typeof ShopAPI === 'undefined') {
+                console.error('ShopAPI is not loaded. Make sure shop-api.js is included.');
+                return null;
+            }
+            return new ShopAPI({
+                workerUrl: "https://quanlykho-api.nguyenxuancuongk56.workers.dev",
+                publicApiKey: "bb90c3e7-c5bf-4276-9539-3a509667c540"
+            });
+        }
+        
+        // Try to initialize immediately or wait for script to load
+        if (typeof ShopAPI !== 'undefined') {
+            shopAPI = initShopAPI();
+        } else {
+            window.addEventListener('load', function() {
+                shopAPI = initShopAPI();
+            });
+        }
+        
+        // Form submission - ensure DOM is ready
+        function setupContactForm() {
+            const contactForm = document.getElementById('contactForm');
+            if (!contactForm) return false;
+            
+            // Check if already initialized
+            if (contactForm.dataset.initialized === 'true') return true;
+            contactForm.dataset.initialized = 'true';
+            
+            contactForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                
+                const submitBtn = this.querySelector('button[type="submit"]');
+                if (!submitBtn) return;
+                
+                const originalText = submitBtn.innerHTML;
+                
+                // Disable button and show loading
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Đang gửi...';
+                
+                    try {
+                        // Ensure ShopAPI is initialized
+                        if (!shopAPI) {
+                            shopAPI = initShopAPI();
+                        }
+                        if (!shopAPI) {
+                            alert('Hệ thống đang tải. Vui lòng thử lại sau.');
+                            return;
+                        }
+                        
+                        const formData = {
+                            name: document.getElementById('name').value,
+                            phone: document.getElementById('phone').value,
+                            email: document.getElementById('email').value || '',
+                            product_type: document.getElementById('product_type').value,
+                            note: document.getElementById('note').value
+                        };
+                        
+                        // Create lead using ShopAPI
+                        const result = await shopAPI.createLead({
+                        name: formData.name,
+                        phone: formData.phone,
+                        email: formData.email,
+                        note: `Sản phẩm quan tâm: ${formData.product_type}\nGhi chú: ${formData.note}`
+                    });
+                    
+                    console.log('Lead created:', result);
+                    
+                    // Show success message
+                    const successMessage = document.getElementById('successMessage');
+                    if (successMessage) {
+                        successMessage.classList.remove('hidden');
+                    }
+                    
+                    // Reset form
+                    this.reset();
+                    
+                    // Hide success message after 5 seconds
+                    setTimeout(() => {
+                        if (successMessage) {
+                            successMessage.classList.add('hidden');
+                        }
+                    }, 5000);
+                    
+                    // Track conversion (if you have analytics)
+                    if (typeof gtag !== 'undefined') {
+                        gtag('event', 'conversion', {
+                            'send_to': 'AW-XXXXXXXXX/XXXXXX',
+                            'value': 1.0,
+                            'currency': 'VND'
+                        });
+                    }
+                    
+                } catch (error) {
+                    console.error('Error submitting form:', error);
+                    alert('Có lỗi xảy ra khi gửi form. Vui lòng thử lại sau hoặc liên hệ hotline: 1900 2323');
+                } finally {
+                    // Re-enable button
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
+            });
+            
+            return true;
+        }
+        
+        // Try to setup immediately (if DOM is ready)
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupContactForm);
+        } else {
+            setupContactForm();
+        }
+        
+        // Parallax effect for hero
+        window.addEventListener('scroll', function() {
+            const parallax = document.querySelector('.parallax');
+            if (parallax) {
+                const scrolled = window.pageYOffset;
+                parallax.style.transform = 'translateY(' + scrolled * 0.5 + 'px)';
+            }
+        });
+    </script>
+</body>
+</html>

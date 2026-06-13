@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chi tiết sản phẩm - AirPure</title>
+  <meta name="description" content="Chi tiết sản phẩm máy lọc không khí">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="container">
+      <div class="header-content">
+        <a href="index.html" class="logo">🌬️ AirPure</a>
+        <nav class="header-nav">
+          <div class="nav-menu">
+            <div class="nav-item dropdown">
+              <button class="dropdown-toggle" id="categories-dropdown">
+                Danh mục <span class="dropdown-arrow">▼</span>
+              </button>
+              <div class="dropdown-menu" id="categories-menu">
+                <a href="index.html" class="dropdown-item">Tất cả sản phẩm</a>
+                <div class="dropdown-divider"></div>
+                <!-- Categories will be populated by JavaScript -->
+              </div>
+            </div>
+            <a href="index.html" class="nav-item">Trang chủ</a>
+            <a href="cart.html" class="nav-item">Giỏ hàng</a>
+          </div>
+          <button class="cart-toggle" id="cart-toggle">
+            <span class="cart-icon">🛒</span>
+            <span class="cart-badge" id="cart-badge">0</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main">
+    <div class="container">
+      <!-- Breadcrumb -->
+      <nav class="breadcrumb">
+        <a href="index.html">Trang chủ</a>
+        <span> / </span>
+        <span id="breadcrumb-category">Sản phẩm</span>
+        <span> / </span>
+        <span id="breadcrumb-product">Chi tiết</span>
+      </nav>
+
+      <!-- Loading State -->
+      <div id="loading-state" class="loading-state">
+        <div class="spinner"></div>
+        <p>Đang tải sản phẩm...</p>
+      </div>
+
+      <!-- Error State -->
+      <div id="error-state" class="error-state" style="display: none;">
+        <div class="error-icon">⚠️</div>
+        <p id="error-message" class="error-message"></p>
+        <a href="index.html" class="btn-retry">Về trang chủ</a>
+      </div>
+
+      <!-- Product Detail -->
+      <div id="product-detail" class="product-detail" style="display: none;">
+        <div class="product-detail-grid">
+          <!-- Product Image -->
+          <div class="product-image-section">
+            <div class="product-main-image">
+              <img id="product-main-img" src="" alt="" loading="lazy">
+            </div>
+          </div>
+
+          <!-- Product Info -->
+          <div class="product-info-section">
+            <h1 id="product-title" class="product-detail-title"></h1>
+            <div class="product-detail-price" id="product-price"></div>
+            <div class="product-detail-stock" id="product-stock"></div>
+            
+            <div class="product-description-full" id="product-description"></div>
+
+            <!-- Order Form -->
+            <form id="product-order-form" class="product-order-form">
+              <div class="form-group">
+                <label for="order-qty">Số lượng:</label>
+                <div class="qty-controls">
+                  <button type="button" class="qty-btn" onclick="changeOrderQty(-1)">−</button>
+                  <input 
+                    type="number" 
+                    id="order-qty" 
+                    value="1" 
+                    min="1" 
+                    max="1"
+                    readonly
+                    class="qty-input"
+                  >
+                  <button type="button" class="qty-btn" onclick="changeOrderQty(1)">+</button>
+                </div>
+              </div>
+
+              <button type="submit" class="btn-add-to-cart-large" id="add-to-cart-btn">
+                🛒 Thêm vào giỏ hàng
+              </button>
+              <button type="button" class="btn-buy-now" id="buy-now-btn">
+                💳 Mua ngay
+              </button>
+            </form>
+
+            <!-- Product Features -->
+            <div class="product-features" id="product-features">
+              <h3>Đặc điểm nổi bật:</h3>
+              <ul id="product-features-list">
+                <!-- Will be populated from product fields -->
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <div id="footer-placeholder"></div>
+
+  <!-- Scripts -->
+  <script src="common.js"></script>
+  <script src="shop-api.js"></script>
+  <script>
+    let product = null;
+    let orderQty = 1;
+    let maxStock = 1;
+
+    // Load footer
+    fetch('footer.html')
+      .then(res => res.text())
+      .then(html => {
+        document.getElementById('footer-placeholder').innerHTML = html;
+        // Initialize subscribe form after footer is loaded
+        if (typeof initFooterSubscribeForm === 'function') {
+          initFooterSubscribeForm();
+        }
+        // Initialize contact form after footer is loaded
+        if (typeof initFooterContactForm === 'function') {
+          initFooterContactForm();
+        }
+      })
+      .catch(err => console.error('Error loading footer:', err));
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', async () => {
+      shopAPI = initShopAPI();
+      cart = JSON.parse(localStorage.getItem('shop_cart') || '[]');
+      updateCartBadge();
+      
+      // Load categories for dropdown (with small delay to ensure DOM is ready)
+      setTimeout(() => {
+        if (typeof loadAndRenderCategories === 'function') {
+          loadAndRenderCategories();
+        }
+      }, 100);
+
+      // Get product ID from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const productId = urlParams.get('id');
+      
+      if (!productId) {
+        showError('Không tìm thấy sản phẩm');
+        return;
+      }
+
+      await loadProduct(productId);
+    });
+
+    async function loadProduct(productId) {
+      try {
+        showLoading();
+        
+        if (!shopAPI) {
+          showError('ShopAPI chưa được khởi tạo');
+          return;
+        }
+
+        product = await shopAPI.getProductBySlug(productId);
+        
+        if (!product) {
+          showError('Không tìm thấy sản phẩm với ID: ' + productId);
+          return;
+        }
+
+        renderProduct();
+        hideLoading();
+      } catch (error) {
+        console.error('Error loading product:', error);
+        showError(error.message || 'Không thể tải sản phẩm. Vui lòng thử lại.');
+      }
+    }
+
+    function renderProduct() {
+      if (!product) {
+        showError('Không tìm thấy sản phẩm');
+        return;
+      }
+
+      const title = getProductTitle(product);
+      const price = getProductPrice(product);
+      const stock = getProductStock(product);
+      const image = getImageSource(product['image link'] || product.image || '');
+      const description = product.description || '';
+
+      maxStock = stock;
+
+      // Update breadcrumb
+      const breadcrumbProduct = document.getElementById('breadcrumb-product');
+      if (breadcrumbProduct) breadcrumbProduct.textContent = title;
+
+      // Update image
+      const mainImg = document.getElementById('product-main-img');
+      if (mainImg) {
+        if (image) {
+          mainImg.src = image;
+          mainImg.alt = title;
+          mainImg.style.display = 'block';
+        } else {
+          mainImg.style.display = 'none';
+        }
+      }
+
+      // Update info
+      const titleEl = document.getElementById('product-title');
+      if (titleEl) titleEl.textContent = title;
+      
+      const priceEl = document.getElementById('product-price');
+      if (priceEl) priceEl.textContent = formatPrice(price);
+      
+      const stockEl = document.getElementById('product-stock');
+      if (stockEl) {
+        if (stock > 0) {
+          stockEl.textContent = `Còn ${stock} sản phẩm`;
+          stockEl.className = 'product-detail-stock in-stock';
+        } else {
+          stockEl.textContent = 'Hết hàng';
+          stockEl.className = 'product-detail-stock out-of-stock';
+        }
+      }
+
+      // Update description
+      const descEl = document.getElementById('product-description');
+      if (descEl) {
+        if (description) {
+          descEl.textContent = description;
+        } else {
+          descEl.textContent = 'Sản phẩm máy lọc không khí chất lượng cao, bảo vệ sức khỏe gia đình bạn.';
+        }
+      }
+
+      // Update form
+      const qtyInput = document.getElementById('order-qty');
+      if (qtyInput) {
+        qtyInput.max = stock;
+        qtyInput.value = Math.min(orderQty, stock);
+      }
+      
+      const addBtn = document.getElementById('add-to-cart-btn');
+      const buyBtn = document.getElementById('buy-now-btn');
+      
+      if (stock <= 0) {
+        if (addBtn) {
+          addBtn.disabled = true;
+          addBtn.textContent = 'Hết hàng';
+        }
+        if (buyBtn) {
+          buyBtn.disabled = true;
+          buyBtn.textContent = 'Hết hàng';
+        }
+      } else {
+        if (addBtn) {
+          addBtn.disabled = false;
+          addBtn.textContent = '🛒 Thêm vào giỏ hàng';
+        }
+        if (buyBtn) {
+          buyBtn.disabled = false;
+          buyBtn.textContent = '💳 Mua ngay';
+        }
+      }
+
+      // Update product features from product detail and product highlight fields
+      const featuresList = document.getElementById('product-features-list');
+      if (featuresList) {
+        const productDetail = product['product detail'] || product['product_detail'] || '';
+        const productHighlight = product['product highlight'] || product['product_highlight'] || '';
+        
+        featuresList.innerHTML = '';
+        
+        // Parse product detail (can be text or list)
+        if (productDetail) {
+          const detailItems = parseFeatureText(productDetail);
+          detailItems.forEach(item => {
+            const li = document.createElement('li');
+            li.textContent = item;
+            featuresList.appendChild(li);
+          });
+        }
+        
+        // Parse product highlight (can be text or list)
+        if (productHighlight) {
+          const highlightItems = parseFeatureText(productHighlight);
+          highlightItems.forEach(item => {
+            const li = document.createElement('li');
+            li.textContent = item;
+            featuresList.appendChild(li);
+          });
+        }
+        
+        // If no features found, show default message
+        if (featuresList.children.length === 0) {
+          const li = document.createElement('li');
+          li.textContent = '✅ Sản phẩm chất lượng cao, đảm bảo uy tín';
+          featuresList.appendChild(li);
+        }
+      }
+
+      // Show product detail
+      const productDetail = document.getElementById('product-detail');
+      if (productDetail) productDetail.style.display = 'block';
+    }
+
+    /**
+     * Parse feature text into array of items
+     * Supports: newline-separated, comma-separated, or bullet-point format
+     */
+    function parseFeatureText(text) {
+      if (!text || typeof text !== 'string') return [];
+      
+      // Split by newlines first
+      let items = text.split(/\n+/).filter(item => item.trim());
+      
+      // If no newlines, try splitting by commas
+      if (items.length === 1) {
+        items = text.split(',').filter(item => item.trim());
+      }
+      
+      // Clean up items (remove bullets, dashes, etc.)
+      return items.map(item => {
+        item = item.trim();
+        // Remove common bullet points
+        item = item.replace(/^[•\-\*✓✅]\s*/, '');
+        // Ensure it starts with a checkmark or similar
+        if (!item.startsWith('✅') && !item.startsWith('✓')) {
+          item = '✅ ' + item;
+        }
+        return item;
+      }).filter(item => item.length > 0);
+    }
+
+    function changeOrderQty(delta) {
+      orderQty = Math.max(1, Math.min(maxStock, orderQty + delta));
+      document.getElementById('order-qty').value = orderQty;
+    }
+
+    // Form handlers
+    document.getElementById('product-order-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      addToCartFromDetail();
+    });
+
+    document.getElementById('buy-now-btn').addEventListener('click', () => {
+      addToCartFromDetail(true);
+    });
+
+    function addToCartFromDetail(buyNow = false) {
+      if (!product) return;
+
+      const stock = getProductStock(product);
+      if (stock <= 0) {
+        showToast('Sản phẩm đã hết hàng', 'error');
+        return;
+      }
+
+      const qty = parseInt(document.getElementById('order-qty').value) || 1;
+      
+      if (qty > stock) {
+        showToast('Không đủ hàng trong kho', 'error');
+        return;
+      }
+
+      const cartItem = cart.find(item => item.id === product.id);
+      
+      if (cartItem) {
+        if (cartItem.qty + qty > stock) {
+          showToast('Không đủ hàng trong kho', 'error');
+          return;
+        }
+        cartItem.qty += qty;
+      } else {
+        cart.push({
+          id: product.id,
+          name: getProductTitle(product),
+          price: getProductPrice(product),
+          qty: qty,
+          stock: stock,
+          image: getImageSource(product['image link'] || product.image || '')
+        });
+      }
+
+      saveCart();
+      updateCartBadge();
+      showToast(`Đã thêm ${qty} sản phẩm vào giỏ hàng`, 'success');
+
+      if (buyNow) {
+        window.location.href = 'checkout.html';
+      }
+    }
+
+    function showLoading() {
+      document.getElementById('loading-state').style.display = 'flex';
+      document.getElementById('error-state').style.display = 'none';
+      document.getElementById('product-detail').style.display = 'none';
+    }
+
+    function hideLoading() {
+      document.getElementById('loading-state').style.display = 'none';
+    }
+
+    function showError(message) {
+      document.getElementById('error-state').style.display = 'flex';
+      document.getElementById('error-message').textContent = message;
+      document.getElementById('loading-state').style.display = 'none';
+      document.getElementById('product-detail').style.display = 'none';
+    }
+
+  </script>
+</body>
+</html>

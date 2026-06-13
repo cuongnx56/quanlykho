@@ -1,0 +1,200 @@
+<!-- Footer Component -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-content">
+      <!-- Logo & Info -->
+      <div class="footer-section">
+        <h3 class="footer-logo">🌬️ AirPure</h3>
+        <p class="footer-description">Chuyên cung cấp máy lọc không khí chất lượng cao, bảo vệ sức khỏe gia đình bạn.</p>
+        <div class="footer-contact">
+          <p><strong>📞 Hotline:</strong> <a href="tel:1900123456">1900 123 456</a></p>
+          <p><strong>📧 Email:</strong> <a href="mailto:info@airpure.vn">info@airpure.vn</a></p>
+          <p><strong>📍 Địa chỉ:</strong> 123 Đường ABC, Quận XYZ, TP.HCM</p>
+        </div>
+      </div>
+
+      <!-- Quick Links -->
+      <div class="footer-section">
+        <h4 class="footer-title">Liên kết nhanh</h4>
+        <ul class="footer-links">
+          <li><a href="index.html">Trang chủ</a></li>
+          <li><a href="index.html#products">Sản phẩm</a></li>
+          <li><a href="cart.html">Giỏ hàng</a></li>
+          <li><a href="#contact">Liên hệ</a></li>
+        </ul>
+      </div>
+
+      <!-- Policies -->
+      <div class="footer-section">
+        <h4 class="footer-title">Chính sách</h4>
+        <ul class="footer-links">
+          <li><a href="#policy-shipping">Chính sách vận chuyển</a></li>
+          <li><a href="#policy-return">Chính sách đổi trả</a></li>
+          <li><a href="#policy-refund">Chính sách hoàn tiền</a></li>
+          <li><a href="#policy-privacy">Chính sách bảo mật</a></li>
+          <li><a href="#policy-terms">Điều khoản sử dụng</a></li>
+        </ul>
+      </div>
+
+      <!-- Newsletter Subscribe -->
+      <div class="footer-section">
+        <h4 class="footer-title">Đăng ký nhận tin</h4>
+        <p class="footer-subtitle">Nhận thông tin khuyến mãi và sản phẩm mới nhất</p>
+        <form id="footer-subscribe-form" class="footer-subscribe-form" action="javascript:void(0);" method="post">
+          <div class="subscribe-input-group">
+            <input 
+              type="email" 
+              id="subscribe-email" 
+              placeholder="Nhập email của bạn" 
+              required
+              class="subscribe-input"
+            >
+            <button type="submit" class="subscribe-btn" id="subscribe-btn">
+              <span class="subscribe-btn-text">Đăng ký</span>
+              <span class="subscribe-btn-loading" style="display: none;">⏳</span>
+            </button>
+          </div>
+          <p class="subscribe-message" id="subscribe-message"></p>
+        </form>
+      </div>
+
+      <!-- Contact Form -->
+      <div class="footer-section">
+        <h4 class="footer-title">Liên hệ với chúng tôi</h4>
+        <form id="footer-contact-form" class="footer-contact-form" action="javascript:void(0);" method="post">
+          <input 
+            type="text" 
+            id="contact-name" 
+            placeholder="Họ tên" 
+            required
+            class="footer-input"
+          >
+          <input 
+            type="email" 
+            id="contact-email" 
+            placeholder="Email" 
+            required
+            class="footer-input"
+          >
+          <textarea 
+            id="contact-message" 
+            placeholder="Tin nhắn" 
+            rows="3"
+            required
+            class="footer-textarea"
+          ></textarea>
+          <button type="submit" class="footer-submit-btn">Gửi tin nhắn</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <p>&copy; 2024 AirPure. Tất cả quyền được bảo lưu.</p>
+    </div>
+  </div>
+</footer>
+
+<style>
+/* Newsletter Subscribe Styles */
+.footer-subscribe-form {
+  margin-top: 1rem;
+}
+
+.footer-subtitle {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.subscribe-input-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.subscribe-input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 0.9375rem;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.subscribe-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.subscribe-input:focus {
+  border-color: #4CAF50;
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.subscribe-btn {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 100px;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.subscribe-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+}
+
+.subscribe-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.subscribe-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.subscribe-message {
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  min-height: 1.25rem;
+  transition: all 0.3s ease;
+}
+
+.subscribe-message.success {
+  color: #4CAF50;
+}
+
+.subscribe-message.error {
+  color: #f44336;
+}
+
+.subscribe-message.info {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .subscribe-input-group {
+    flex-direction: column;
+  }
+  
+  .subscribe-btn {
+    width: 100%;
+  }
+}
+</style>
