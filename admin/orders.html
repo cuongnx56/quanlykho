@@ -244,23 +244,6 @@
     <div class="modal-header" style="flex-shrink:0;">
       <h3 id="invoice-preview-title">🧾 Hóa đơn</h3>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-
-        <!-- Nút Lưu — chỉ hiện khi chưa lưu vào sheet -->
-        <button id="btn-invoice-save"
-                onclick="_saveInvoiceToSheet()"
-                class="btn-secondary"
-                style="font-size:13px;padding:6px 14px;display:none;">
-          💾 Lưu hóa đơn
-        </button>
-
-        <!-- Badge đã lưu — hiện sau khi lưu thành công -->
-        <span id="invoice-saved-badge"
-              style="display:none;font-size:12px;color:#1a7a4a;font-weight:600;
-                     background:#e6f9f0;border:1px solid #bbf7d0;
-                     padding:4px 10px;border-radius:6px;">
-          ✅ Đã lưu
-        </span>
-
         <button class="btn-primary" onclick="printCurrentInvoice()" style="font-size:13px;padding:6px 14px;">
           🖨️ In hóa đơn
         </button>
