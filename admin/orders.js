@@ -155,6 +155,8 @@ async function _recoverPendingOrders() {
         updateOrderInList(realOrder);
         _cacheReplaceOrder(entry.tempId, realOrder);
       }
+      // Cập nhật baseline để WS không popup "có đơn mới" cho đơn admin vừa tạo
+      _lastRemoteHeadOrderId = String(realId);
       _pendingEnd(entry.tempId);
     } catch (err) {
       if (!isNetworkOrResponseError(err)) _pendingEnd(entry.tempId);
@@ -878,7 +880,7 @@ function _buildInvoiceHTML(invoice) {
   const invoiceNum  = invoice.invoice_number
     ? `<strong>${escapeHtml(String(invoice.invoice_number))}</strong>`
     : invoice._unsaved
-      ? '<span style="color:#94a3b8">Chưa lưu</span>'
+      ? `<span style="color:#94a3b8">Đơn #${escapeHtml(String(invoice.order_id || ""))}</span>`
       : escapeHtml(String(invoice.id || ""));
 
   const vatRow = vatRate > 0
@@ -941,20 +943,6 @@ function openInvoicePreview(invoice) {
   const bodyEl = document.getElementById("invoice-preview-body");
   if (!bodyEl) return;
   bodyEl.innerHTML = _buildInvoiceHTML(invoice);
-
-  // Nút "Lưu hóa đơn": hiện nếu chưa lưu, ẩn nếu đã có invoice_number
-  const saveBtn    = byId("btn-invoice-save");
-  const savedBadge = byId("invoice-saved-badge");
-  if (invoice._unsaved) {
-    // Chưa lưu → hiện nút Lưu
-    if (saveBtn)    { saveBtn.style.display = "inline-flex"; saveBtn.disabled = false; saveBtn.textContent = "💾 Lưu hóa đơn"; }
-    if (savedBadge)   savedBadge.style.display = "none";
-  } else {
-    // Đã có invoice_number (từ GAS) → ẩn nút Lưu
-    if (saveBtn)    saveBtn.style.display = "none";
-    if (savedBadge) savedBadge.style.display = "inline-flex";
-  }
-
   document.getElementById("invoice-preview-modal")?.classList.add("active");
 }
 
