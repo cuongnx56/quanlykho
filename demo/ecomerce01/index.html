@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AirPure - Máy lọc không khí chất lượng cao</title>
+  <meta name="description" content="AirPure - Chuyên cung cấp máy lọc không khí chất lượng cao, bảo vệ sức khỏe gia đình bạn">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="container">
+      <div class="header-content">
+        <a href="index.html" class="logo">🌬️ AirPure</a>
+        <nav class="header-nav">
+          <div class="nav-menu">
+            <a href="index.html" class="nav-item">Trang chủ</a>
+            <a href="cart.html" class="nav-item">Giỏ hàng</a>
+          </div>
+          <button class="cart-toggle" id="cart-toggle">
+            <span class="cart-icon">🛒</span>
+            <span class="cart-badge" id="cart-badge">0</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main">
+    <div class="container">
+      <!-- Hero Section -->
+      <section class="hero-section">
+        <div class="hero-content">
+          <h1 class="hero-title">Máy lọc không khí chất lượng cao</h1>
+          <p class="hero-subtitle">Bảo vệ sức khỏe gia đình bạn với công nghệ lọc không khí tiên tiến</p>
+        </div>
+      </section>
+
+      <!-- Search Section -->
+      <section class="filters-section">
+        <div class="search-box">
+          <input 
+            type="text" 
+            id="search-input" 
+            placeholder="Tìm theo mã hoặc tên sản phẩm..." 
+            class="search-input"
+          >
+          <button class="search-btn" id="search-btn">🔍 Tìm kiếm</button>
+        </div>
+      </section>
+
+      <!-- Products Section -->
+      <section class="products-section">
+        <div class="section-header">
+          <h2 class="section-title">Sản phẩm</h2>
+          <div class="products-count" id="products-count">Đang tải...</div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading-state" class="loading-state">
+          <div class="spinner"></div>
+          <p>Đang tải sản phẩm...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-state" class="error-state" style="display: none;">
+          <div class="error-icon">⚠️</div>
+          <p class="error-message"></p>
+          <button class="btn-retry" id="retry-btn">Thử lại</button>
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="empty-state" style="display: none;">
+          <div class="empty-icon">📦</div>
+          <p>Không tìm thấy sản phẩm nào</p>
+        </div>
+
+        <!-- Products Grid -->
+        <div id="products-grid" class="products-grid"></div>
+
+        <!-- Pagination -->
+        <div id="pagination" class="pagination" style="display: none;"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Cart Sidebar -->
+  <aside class="cart-sidebar" id="cart-sidebar">
+    <div class="cart-header">
+      <h2>Giỏ hàng</h2>
+      <button class="cart-close" id="cart-close">✕</button>
+    </div>
+    
+    <div class="cart-content">
+      <div id="cart-items" class="cart-items">
+        <div class="cart-empty">
+          <p>Giỏ hàng trống</p>
+        </div>
+      </div>
+      
+      <div class="cart-footer">
+        <div class="cart-total">
+          <span>Tổng cộng:</span>
+          <span id="cart-total" class="cart-total-amount">0₫</span>
+        </div>
+        <button class="btn-checkout" id="checkout-btn" disabled>
+          Đặt hàng
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Cart Overlay -->
+  <div class="cart-overlay" id="cart-overlay"></div>
+
+  <!-- Checkout Modal -->
+  <div class="modal" id="checkout-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Thông tin đặt hàng</h2>
+        <button class="modal-close" id="modal-close">✕</button>
+      </div>
+      
+      <form id="checkout-form" class="checkout-form">
+        <div class="form-group">
+          <label for="customer-name">Họ tên *</label>
+          <input 
+            type="text" 
+            id="customer-name" 
+            required 
+            placeholder="Nhập họ tên"
+          >
+        </div>
+        
+        <div class="form-group">
+          <label for="customer-phone">Số điện thoại *</label>
+          <input 
+            type="tel" 
+            id="customer-phone" 
+            required 
+            placeholder="Nhập số điện thoại"
+          >
+        </div>
+        
+        <div class="form-group">
+          <label for="customer-email">Email</label>
+          <input 
+            type="email" 
+            id="customer-email" 
+            placeholder="Nhập email (tùy chọn)"
+          >
+        </div>
+        
+        <div class="form-actions">
+          <button type="button" class="btn-cancel" id="cancel-btn">Hủy</button>
+          <button type="submit" class="btn-submit">Xác nhận đặt hàng</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Success Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Footer -->
+  <div id="footer-placeholder"></div>
+
+  <!-- Scripts -->
+  <script src="common.js"></script>
+  <script src="shop-api.js"></script>
+  <script src="shop.js"></script>
+  <script>
+    // Load footer and initialize forms
+    fetch('footer.html')
+      .then(res => res.text())
+      .then(html => {
+        const placeholder = document.getElementById('footer-placeholder');
+        if (placeholder) {
+          placeholder.innerHTML = html;
+          
+          setTimeout(() => {
+            if (typeof initFooterSubscribeForm === 'function') {
+              initFooterSubscribeForm();
+            }
+            if (typeof initFooterContactForm === 'function') {
+              initFooterContactForm();
+            }
+          }, 50);
+        }
+      })
+      .catch(err => console.error('Error loading footer:', err));
+  </script>
+</body>
+</html>

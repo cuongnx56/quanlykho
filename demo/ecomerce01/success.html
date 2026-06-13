@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đặt hàng thành công - AirPure</title>
+  <meta name="description" content="Cảm ơn bạn đã đặt hàng - AirPure">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="container">
+      <div class="header-content">
+        <a href="index.html" class="logo">🌬️ AirPure</a>
+        <nav class="header-nav">
+          <div class="nav-menu">
+            <div class="nav-item dropdown">
+              <button class="dropdown-toggle" id="categories-dropdown">
+                Danh mục <span class="dropdown-arrow">▼</span>
+              </button>
+              <div class="dropdown-menu" id="categories-menu">
+                <a href="index.html" class="dropdown-item">Tất cả sản phẩm</a>
+                <div class="dropdown-divider"></div>
+              </div>
+            </div>
+            <a href="index.html" class="nav-item">Trang chủ</a>
+            <a href="cart.html" class="nav-item">Giỏ hàng</a>
+          </div>
+          <button class="cart-toggle" id="cart-toggle">
+            <span class="cart-icon">🛒</span>
+            <span class="cart-badge" id="cart-badge">0</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main">
+    <div class="container">
+      <div class="success-page">
+        <div class="success-icon">✅</div>
+        <h1 class="success-title">Đặt hàng thành công!</h1>
+        <p class="success-message">
+          Cảm ơn bạn đã đặt hàng tại AirPure. Chúng tôi đã nhận được đơn hàng của bạn và sẽ xử lý trong thời gian sớm nhất.
+        </p>
+        
+        <div class="success-info">
+          <div class="info-box">
+            <h3>Mã đơn hàng</h3>
+            <p class="order-id" id="order-id">Đang tải...</p>
+          </div>
+          
+          <div class="info-box">
+            <h3>Bước tiếp theo</h3>
+            <ul class="next-steps">
+              <li>📧 Chúng tôi sẽ gửi email xác nhận đơn hàng đến bạn</li>
+              <li>📞 Nhân viên sẽ liên hệ với bạn để xác nhận đơn hàng trong vòng 24 giờ</li>
+              <li>🚚 Đơn hàng sẽ được giao trong 2-5 ngày làm việc</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="success-actions">
+          <a href="index.html" class="btn-primary">Tiếp tục mua sắm</a>
+          <a href="#" class="btn-secondary" onclick="window.print(); return false;">In hóa đơn</a>
+        </div>
+
+        <div class="success-support">
+          <h3>Hỗ trợ khách hàng</h3>
+          <p>Nếu bạn có bất kỳ câu hỏi nào về đơn hàng, vui lòng liên hệ:</p>
+          <div class="support-contacts">
+            <p>📞 Hotline: <a href="tel:1900123456">1900 123 456</a></p>
+            <p>📧 Email: <a href="mailto:info@airpure.vn">info@airpure.vn</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <div id="footer-placeholder"></div>
+
+  <!-- Scripts -->
+  <script src="common.js"></script>
+  <script src="shop-api.js"></script>
+  <script>
+    // Load footer
+    fetch('footer.html')
+      .then(res => res.text())
+      .then(html => {
+        document.getElementById('footer-placeholder').innerHTML = html;
+        // Initialize subscribe form after footer is loaded
+        if (typeof initFooterSubscribeForm === 'function') {
+          initFooterSubscribeForm();
+        }
+        // Initialize contact form after footer is loaded
+        if (typeof initFooterContactForm === 'function') {
+          initFooterContactForm();
+        }
+      })
+      .catch(err => console.error('Error loading footer:', err));
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      shopAPI = initShopAPI();
+      cart = JSON.parse(localStorage.getItem('shop_cart') || '[]');
+      updateCartBadge();
+      
+      // Load categories
+      if (typeof loadAndRenderCategories === 'function') {
+        loadAndRenderCategories();
+      }
+
+      // Get order ID from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const orderId = urlParams.get('order_id');
+      
+      if (orderId) {
+        document.getElementById('order-id').textContent = `#${orderId}`;
+      } else {
+        document.getElementById('order-id').textContent = 'Đã nhận';
+      }
+    });
+
+  </script>
+</body>
+</html>
